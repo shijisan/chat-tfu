@@ -47,8 +47,8 @@ npx prisma migrate dev
 
 ## **📜 Roadmap**  
 ☑️ Basic real-time chat  
-☑️ Encrypted messaging  
-☑️ Image & video uploads  
+⬜ Encrypted messaging  
+⬜ Image & video uploads  
 ⬜ End-to-end encryption for messages  
 ⬜ Video & voice calls  
 ⬜ Group chats  
