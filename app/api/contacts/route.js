@@ -1,9 +1,26 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getUser } from "@/util/getUser";
+import crypto from "crypto";
+import redis from "@/lib/redis";
+
+function generateSharedKey() {
+    return crypto.randomBytes(32).toString("hex");
+}
+
+function encryptSharedKey(data, secret) {
+    const iv = crypto.randomBytes(16);
+    const key = Buffer.alloc(32);
+    Buffer.from(secret).copy(key, 0, 0, Math.min(Buffer.from(secret).length, 32));
+    const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+    let encrypted = cipher.update(data, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    return `${iv.toString("hex")}:${encrypted}`;
+}
 
 export async function GET() {
     try {
+        console.log("Redis store before fetching key:", redis)
         const userId = await getUser();
         if (!userId) {
             return NextResponse.json(
@@ -104,12 +121,36 @@ export async function POST(req) {
             );
         }
 
+        const sharedKey = generateSharedKey();
+
+        const currentUserDecryptedKey = await redis.get(`decryptedKey:${userId}`);
+        if (!currentUserDecryptedKey) {
+            return NextResponse.json(
+                { message: "Decrypted encryption key not found in Redis. Please log in again." },
+                { status: 401 }
+            );
+        }
+        const sharedUserKey = encryptSharedKey(sharedKey, currentUserDecryptedKey);
+
+        const friendDecryptedKey = await redis.get(`decryptedKey:${friend.id}`);
+        console.log("Fetching friend's decrypted key with key:", `decryptedKey:${friend.id}`);
+
+        if (!friendDecryptedKey) {
+            return NextResponse.json(
+                { message: "Friend's decrypted encryption key not found in Redis." },
+                { status: 401 }
+            );
+        }
+        const sharedContactKey = encryptSharedKey(sharedKey, friendDecryptedKey);
+
         const newContact = await prisma.contact.create({
             data: {
                 userId: userId,
                 friendId: friend.id,
                 isFriend: false,
                 blocked: false,
+                sharedUserKey: sharedUserKey,
+                sharedContactKey: sharedContactKey,
             },
         });
 
@@ -119,6 +160,8 @@ export async function POST(req) {
                 friendId: userId,
                 isFriend: false,
                 blocked: false,
+                sharedUserKey: sharedContactKey,
+                sharedContactKey: sharedUserKey,
             },
         });
 

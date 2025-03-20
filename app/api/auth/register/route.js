@@ -1,36 +1,41 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SignJWT } from "jose";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
-export async function POST(req){
-    const {username, email, password} = await req.json();
+export async function POST(req) {
+    const { username, email, password } = await req.json();
 
-    try{
-
+    try {
         const userCheck = await prisma.user.findUnique({
-            where: {email},
+            where: { email },
         });
 
-        if (!userCheck){
+        if (!userCheck) {
+            const encryptionKey = crypto.randomBytes(32).toString("hex");
+            const iv = crypto.randomBytes(16);
+            const key = crypto.scryptSync(password, "salt", 32);
+            const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+            let encryptedKey = cipher.update(encryptionKey, "utf8", "hex");
+            encryptedKey += cipher.final("hex");
+            const encryptedKeyWithIV = `${iv.toString("hex")}:${encryptedKey}`;
 
             const hashedPassword = await bcrypt.hash(password, 10);
 
-            const newUser = await prisma.user.create({
+            await prisma.user.create({
                 data: {
-                    username, email, password: hashedPassword,
-                }
-            })
-            return NextResponse.json({message: "Successfully created your account"}, {status: 201});
+                    username,
+                    email,
+                    password: hashedPassword,
+                    encryptedKey: encryptedKeyWithIV,
+                },
+            });
 
+            return NextResponse.json({ message: "Successfully created your account" }, { status: 201 });
+        } else {
+            return NextResponse.json({ message: "Email already in use" }, { status: 409 });
         }
-        else{
-            return NextResponse.json({message: "Email already in use"}, {status: 402});
-        }
-
-    }
-    catch (error){
-        return NextResponse.json({message: "Error creating your account"}, {status: 500});
+    } catch (error) {
+        return NextResponse.json({ message: "Error creating your account" }, { status: 500 });
     }
 }
