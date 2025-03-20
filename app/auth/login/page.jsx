@@ -1,27 +1,17 @@
 "use client";
 
-import { Suspense, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function Login() {
-    const email = useRef(null);
-    const password = useRef(null);
-    const [error, setError] = useState("");
-    const router = useRouter();
-
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <LoginForm 
-                email={email} 
-                password={password} 
-                setError={setError} 
-                router={router} 
-            />
-        </Suspense>
-    );
+    return <LoginForm />;
 }
 
-function LoginForm({ email, password, setError, router }) {
+function LoginForm() {
+    const email = useRef(null);
+    const password = useRef(null);
+    const [error, setError] = useState(""); // Ensure error state is always defined
+    const router = useRouter();
     const searchParams = useSearchParams();
 
     const handleLogin = async (e) => {
