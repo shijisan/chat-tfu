@@ -1,7 +1,3 @@
-Here's a solid **README** for your project:  
-
----
-
 # **Chat-TFU** 🗨️  
 
 Chat-TFU is a privacy-focused messaging app inspired by Facebook Messenger—but without the surveillance. This is a personal project where I'm building a secure and feature-rich communication platform that respects user privacy.  
