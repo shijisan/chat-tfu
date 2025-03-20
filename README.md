@@ -1,7 +1,3 @@
-Here's a solid **README** for your project:  
-
----
-
 # **Chat-TFU** 🗨️  
 
 Chat-TFU is a privacy-focused messaging app inspired by Facebook Messenger—but without the surveillance. This is a personal project where I'm building a secure and feature-rich communication platform that respects user privacy.  
@@ -17,13 +13,13 @@ Chat-TFU is a privacy-focused messaging app inspired by Facebook Messenger—but
 - **Frontend:** Next.js 15 (App Router), React 19  
 - **Backend:** Node.js (Serverless with Edge functions)  
 - **Database:** PostgreSQL (Prisma ORM)  
-- **Authentication:** Bcrypt.js, JWT (Jose), Cookies  
-- **Real-time Messaging:** Supabase / SSE (Server-Sent Events)  
+- **Authentication:** Bcrypt.js, JWT (Jose), Cookies, Reddis, Crypto
+- **Real-time Messaging:** Listen to DB changes then update to show "Real-time Messages"
 
 ## **⚡ Getting Started**  
 ### **1. Clone the repository**  
 ```bash
-git clone https://github.com/yourusername/chat-tfu.git
+git clone https://github.com/shijisan/chat-tfu.git
 cd chat-tfu
 ```
 
