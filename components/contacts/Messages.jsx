@@ -64,22 +64,25 @@ export default function Messages({ contactId, contactName }) {
 	const sendMessage = async (e) => {
 		e.preventDefault();
 		if (!input.trim()) return;
-
+	
+		const message = input; 
+		setInput(""); 
+	
 		try {
 			const res = await fetch(`/api/messages/${contactId}`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ content: input }),
+				body: JSON.stringify({ content: message }),
 			});
-
+	
 			if (!res.ok) throw new Error("Failed to send message");
-
-			setInput("");
-			setTriggerFetch((prev) => !prev); 
+	
+			setTriggerFetch((prev) => !prev);
 		} catch (error) {
 			console.error("Error sending message:", error);
 		}
 	};
+	
 
 	return (
 		<>
