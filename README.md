@@ -52,3 +52,4 @@ npx prisma migrate dev
 ☑️ End-to-end encryption for messages  
 ⬜ Video & voice calls  
 ⬜ Group chats  
+⬜ Mobile App
