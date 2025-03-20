@@ -1,5 +1,6 @@
 import { Poppins, Roboto_Flex } from "next/font/google";
 import "./globals.css";
+import Nav from "@/components/Nav";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${[robotoFlex.className]} antialiased`}
       >
+        <Nav />
         {children}
       </body>
     </html>

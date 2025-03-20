@@ -54,8 +54,8 @@ export default function Register() {
 
     return (
         <>
-            <main className="md:px-[10vw] mx-auto flex w-full justify-center items-center min-h-screen bg-blue-400">
-                <form className="card card-sm">
+            <main className="md:px-[10vw] mx-auto flex w-full justify-center items-center min-h-screen">
+                <form className="card card-sm border border-neutral-300">
                     <div>
                         <h1 className="text-center text-xl font-medium">Create an Account</h1>
                     </div>

@@ -1,67 +1,121 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
 
-export default function Messages({ contactId }) {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [triggerFetch, setTriggerFetch] = useState(false);
-  const formRef = useRef(null);
+import { useState, useEffect, useRef } from "react";
 
-  // Fetch messages initially and on new message send
-  useEffect(() => {
-    if (!contactId) return;
+export default function Messages({ contactId, contactName }) {
+	const [messages, setMessages] = useState([]);
+	const [input, setInput] = useState("");
+	const [triggerFetch, setTriggerFetch] = useState(false);
+	const [userId, setUserId] = useState("");
+	const messagesEndRef = useRef(null);
+	const formRef = useRef(null);
 
-    fetch(`/api/messages/${contactId}`)
-      .then((res) => res.json())
-      .then((data) => setMessages(data));
+	useEffect(() => {
+		if (!contactId) return;
 
-    const eventSource = new EventSource(`/api/messages/${contactId}/stream`);
-    eventSource.onmessage = (event) => {
-      const newMessage = JSON.parse(event.data);
-      setMessages((prev) => [...prev, newMessage]);
-    };
+		const fetchUser = async () => {
+			try {
+				const res = await fetch("/api/getUser");
+				if (!res.ok) throw new Error("Failed to fetch user");
+				const data = await res.json();
+				console.log("userId: ", data);
+				setUserId(data.userId); 
+			} catch (error) {
+				console.error("Error fetching user", error);
+			}
+		};
 
-    return () => eventSource.close();
-  }, [contactId, triggerFetch]); // Re-fetch when triggerFetch changes
+		fetchUser();
+	}, [contactId]);
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+	useEffect(() => {
+		if (!contactId) return;
 
-    await fetch(`/api/messages/${contactId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: input }),
-    });
+		const fetchMessages = async () => {
+			try {
+				const res = await fetch(`/api/messages/${contactId}`);
+				if (!res.ok) throw new Error("Failed to fetch messages");
+				const data = await res.json();
+				setMessages(data);
+			} catch (error) {
+				console.error("Error fetching messages:", error);
+			}
+		};
 
-    setInput("");
-    setTriggerFetch((prev) => !prev); // Toggle triggerFetch to force a re-fetch
-  };
+		fetchMessages();
+	}, [contactId, triggerFetch]); 
 
-  return (
-    <>
-      <div className="flex-grow min-h-[85vh] overflow-y-auto">
-        <div className="w-full h-[5vh] border-b">
-            <p>{contactId}</p>
-        </div>
-        {messages.map((msg, index) => (
-          <div key={index} className="p-2 bg-neutral-100 rounded-md my-1">
-            {msg.content}
-          </div>
-        ))}
-      </div>
-      <form onSubmit={sendMessage} className="flex gap-4">
-        <input
-          className="flex-grow w-full bg-neutral-200 rounded-s-full py-2 px-4"
-          type="text"
-          placeholder="Start a chat..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button className="py-2 px-4 btn bg-blue-500 rounded-e-full" type="submit">
-          Send
-        </button>
-      </form>
-    </>
-  );
+	useEffect(() => {
+		if (!userId || !contactId) return;
+
+		const eventSource = new EventSource(`/api/messages/${contactId}/stream`);
+		eventSource.onmessage = (event) => {
+			const newMessage = JSON.parse(event.data);
+			setMessages((prev) => [...prev, newMessage]);
+		};
+
+		return () => eventSource.close();
+	}, [contactId, userId]); 
+
+	useEffect(() => {
+		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+	}, [messages]);
+
+	const sendMessage = async (e) => {
+		e.preventDefault();
+		if (!input.trim()) return;
+
+		try {
+			const res = await fetch(`/api/messages/${contactId}`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ content: input }),
+			});
+
+			if (!res.ok) throw new Error("Failed to send message");
+
+			setInput("");
+			setTriggerFetch((prev) => !prev); 
+		} catch (error) {
+			console.error("Error sending message:", error);
+		}
+	};
+
+	return (
+		<>
+			<div className="flex-grow min-h-[85vh] overflow-y-auto p-4">
+				<div className="w-full h-[5vh] border-b p-2 font-bold">{contactName}</div>
+				<div className="flex flex-col gap-2 mt-2">
+					{messages.map((msg, index) => {
+						const isSentByUser = msg.senderId === userId;
+						return (
+							<div
+								key={index}
+								className={`max-w-[70%] p-2 rounded-md ${
+									isSentByUser
+										? "bg-blue-500 text-white self-end text-end"
+										: "bg-gray-200 text-black self-start text-start"
+								}`}
+							>
+								{msg.content}
+							</div>
+						);
+					})}
+					<div ref={messagesEndRef} />
+				</div>
+			</div>
+			<form onSubmit={sendMessage} className="flex gap-4 pb-8 px-4" ref={formRef}>
+				<input
+					className="flex-grow w-full bg-neutral-200 rounded-s-full py-2 px-4"
+					type="text"
+					placeholder="Start a chat..."
+					value={input}
+					onChange={(e) => setInput(e.target.value)}
+				/>
+				<button className="py-2 px-4 btn bg-blue-500 rounded-e-full" type="submit">
+					Send
+				</button>
+			</form>
+		</>
+	);
 }

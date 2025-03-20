@@ -129,6 +129,7 @@ export async function POST(req, { params }) {
         const newMessage = await prisma.message.create({
             data: {
                 contactId: parseInt(contactId),
+                senderId: currentUserId, // ✅ Added senderId to track the sender
                 content: encryptedContent,
                 reacts: "[]",
             },

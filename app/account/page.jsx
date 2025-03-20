@@ -3,7 +3,7 @@ import Logout from "@/components/account/Logout";
 export default function Account(){
     return(
         <>
-        <main>
+        <main className="pt-[8vh]">
             <Logout />
         </main>  
         </>

@@ -32,7 +32,7 @@ export async function POST(req) {
         let decryptedKey = decipher.update(encrypted, "hex", "utf8");
         decryptedKey += decipher.final("utf8");
 
-        await redis.set(`decryptedKey:${user.id}`, decryptedKey, "EX", 60 * 15);
+        await redis.set(`decryptedKey:${user.id}`, decryptedKey, "EX", 60 * 60);
 
         const authToken = await createAuthToken(user.id);
 

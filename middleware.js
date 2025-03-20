@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-async function verifyAuthToken(token){
+async function verifyAuthToken(token) {
     try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET); 
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
         const { payload } = await jwtVerify(token, secret);
         return payload;
     } catch (error) {
@@ -12,25 +12,28 @@ async function verifyAuthToken(token){
     }
 }
 
-
 export async function middleware(request) {
     const authToken = request.cookies.get("authToken")?.value;
+    const currentUrl = request.nextUrl.clone();
 
     if (!authToken) {
-        return NextResponse.redirect(new URL("/auth/login", request.url));
+        const loginUrl = new URL("/auth/login", request.url);
+        loginUrl.searchParams.set("redirect", currentUrl.pathname + currentUrl.search);
+        return NextResponse.redirect(loginUrl);
     }
 
     const payload = await verifyAuthToken(authToken);
 
     if (!payload) {
-        return NextResponse.redirect(new URL("/auth/login", request.url));
+        const loginUrl = new URL("/auth/login", request.url);
+        loginUrl.searchParams.set("redirect", currentUrl.pathname + currentUrl.search);
+        return NextResponse.redirect(loginUrl);
     }
 
     request.user = { id: payload.userId };
-
     return NextResponse.next();
 }
 
 export const config = {
-    matcher: ["/account/:path*", "/contacts/:path*"], 
+    matcher: ["/account/:path*", "/contacts/:path*"],
 };

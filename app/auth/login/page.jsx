@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function Login() {
     const email = useRef(null);
     const password = useRef(null);
     const [error, setError] = useState("");
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const handleLogin = async (e) => {
         e.preventDefault(); 
@@ -42,7 +43,8 @@ export default function Login() {
             const data = await res.json();
             console.log("Login successful:", data);
 
-            router.push("/account");
+            const redirectTo = searchParams.get("redirect") || "/account";
+            router.push(redirectTo);
         } catch (err) {
             console.error("Network error:", err);
             setError("A network error occurred. Please try again.");
@@ -51,9 +53,9 @@ export default function Login() {
 
     return (
         <>
-            <main className="md:px-[10vw] mx-auto flex w-full justify-center items-center min-h-screen bg-blue-400">
+            <main className="md:px-[10vw] mx-auto flex w-full justify-center items-center min-h-screen">
                 <form
-                    className="card card-sm"
+                    className="card card-sm border border-neutral-300"
                     onSubmit={handleLogin} 
                 >
                     <div>
