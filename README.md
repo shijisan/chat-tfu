@@ -19,7 +19,7 @@ Chat-TFU is a privacy-focused messaging app inspired by Facebook Messenger—but
 ## **⚡ Getting Started**  
 ### **1. Clone the repository**  
 ```bash
-git clone https://github.com/yourusername/chat-tfu.git
+git clone https://github.com/shijisan/chat-tfu.git
 cd chat-tfu
 ```
 
