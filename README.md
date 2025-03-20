@@ -14,7 +14,7 @@ Chat-TFU is a privacy-focused messaging app inspired by Facebook Messenger—but
 - **Backend:** Node.js (Serverless with Edge functions)  
 - **Database:** PostgreSQL (Prisma ORM)  
 - **Authentication:** Bcrypt.js, JWT (Jose), Cookies, Reddis, Crypto
-- **Real-time Messaging:** Supabase / SSE (Server-Sent Events)  
+- **Real-time Messaging:** Listen to DB changes then update to show "Real-time Messages"
 
 ## **⚡ Getting Started**  
 ### **1. Clone the repository**  
