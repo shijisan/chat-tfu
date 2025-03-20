@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function Login() {
@@ -8,6 +8,20 @@ export default function Login() {
     const password = useRef(null);
     const [error, setError] = useState("");
     const router = useRouter();
+
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LoginForm 
+                email={email} 
+                password={password} 
+                setError={setError} 
+                router={router} 
+            />
+        </Suspense>
+    );
+}
+
+function LoginForm({ email, password, setError, router }) {
     const searchParams = useSearchParams();
 
     const handleLogin = async (e) => {
@@ -52,58 +66,34 @@ export default function Login() {
     };
 
     return (
-        <>
-            <main className="md:px-[10vw] mx-auto flex w-full justify-center items-center min-h-screen">
-                <form
-                    className="card card-sm border border-neutral-300"
-                    onSubmit={handleLogin} 
-                >
-                    <div>
-                        <h1 className="text-center text-xl font-medium">
-                            Sign In To Your Account
-                        </h1>
-                    </div>
-                    <div>
-                        <label hidden htmlFor="email">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            id="email"
-                            ref={email}
-                            placeholder="Email"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label hidden htmlFor="password">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            id="password"
-                            ref={password}
-                            placeholder="Password"
-                            required
-                        />
-                    </div>
-                    <div className="mt-4">
-                        <button type="submit">Login</button> 
-                    </div>
-                    <div className="mb-0">
-                        <p className="text-center">
-                            Don't have an account?{" "}
-                            <a
-                                className="text-blue-500 hover:underline"
-                                href="/auth/register"
-                            >
-                                Sign Up
-                            </a>
-                        </p>
-                    </div>
-                    {error && <p className="text-red-500 text-center">{error}</p>}
-                </form>
-            </main>
-        </>
+        <main className="md:px-[10vw] mx-auto flex w-full justify-center items-center min-h-screen">
+            <form className="card card-sm border border-neutral-300" onSubmit={handleLogin}>
+                <div>
+                    <h1 className="text-center text-xl font-medium">
+                        Sign In To Your Account
+                    </h1>
+                </div>
+                <div>
+                    <label hidden htmlFor="email">Email</label>
+                    <input type="email" id="email" ref={email} placeholder="Email" required />
+                </div>
+                <div>
+                    <label hidden htmlFor="password">Password</label>
+                    <input type="password" id="password" ref={password} placeholder="Password" required />
+                </div>
+                <div className="mt-4">
+                    <button type="submit">Login</button> 
+                </div>
+                <div className="mb-0">
+                    <p className="text-center">
+                        Don't have an account?{" "}
+                        <a className="text-blue-500 hover:underline" href="/auth/register">
+                            Sign Up
+                        </a>
+                    </p>
+                </div>
+                {error && <p className="text-red-500 text-center">{error}</p>}
+            </form>
+        </main>
     );
 }
