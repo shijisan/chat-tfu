@@ -35,5 +35,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-    matcher: ["/account/:path*", "/contacts/:path*"],
+    matcher: ["/account/:path*", "/contacts/:path*", "/api/contacts/:path*", "/api/messages/:path*"],
 };
