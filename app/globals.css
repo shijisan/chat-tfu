@@ -41,20 +41,21 @@ body {
     @apply p-8;
     /* No max-width */
   }
-
-  .card div {
+  
+  form.card div:not(:has(> button)) {
     @apply flex flex-col space-y-2;
   }
+  
 
-  .card label {
+  form.card label {
     @apply text-sm font-medium;
   }
 
-  .card input {
+  form.card input {
     @apply rounded-sm p-2  bg-neutral-100 border border-neutral-300;
   }
 
-  .card button {
+  form.card button {
     @apply px-4 py-2 rounded-full bg-blue-500 hover:brightness-105 transition-all hover:cursor-pointer w-full text-white;
   }
 

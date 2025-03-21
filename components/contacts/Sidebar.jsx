@@ -53,7 +53,9 @@ export default function Sidebar({ onContactClick, activeContactId }) {
 			  ))}
 			</ul>
 		 ) : (
-			<p>No contacts found.</p>
+			<div className="p-4">
+				<p>No contacts found.</p>
+			</div>
 		 )}
 	  </aside>
 	);

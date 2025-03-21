@@ -86,9 +86,9 @@ export default function Messages({ contactId, contactName }) {
 
 	return (
 		<>
-			<div className="flex-grow min-h-[85vh] overflow-y-auto p-4">
-				<div className="w-full h-[5vh] border-b p-2 font-bold">{contactName}</div>
-				<div className="flex flex-col gap-2 mt-2">
+			<div className="flex-grow min-h-[85vh] overflow-y-auto">
+				<div className="w-full h-[5vh] border-b px-8 font-bold flex items-center">{contactName}</div>
+				<div className="flex flex-col gap-2 mt-2 p-8">
 					{messages.map((msg, index) => {
 						const isSentByUser = msg.senderId === userId;
 						return (

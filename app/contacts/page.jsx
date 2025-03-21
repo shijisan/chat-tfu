@@ -16,7 +16,7 @@ export default function Contacts() {
   return (
     <main className="flex min-h-screen">
       <Sidebar activeContactId={contactId} onContactClick={handleContactClick} />
-      <div className="flex-grow w-full border p-8">
+      <div className="flex-grow w-full border">
         {contactId ? (
           <Messages contactName={contactName} contactId={contactId} />
         ) : (
