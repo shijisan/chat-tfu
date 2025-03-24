@@ -82,38 +82,6 @@ export async function PATCH(req, { params }) {
 
 export async function DELETE(req, { params }) {
     try {
-        const { contactId, messageId } = await params;
-
-        // Authenticate user
-        const currentUserId = await getUser();
-        if (!currentUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        // Fetch the contact to validate permissions
-        const contact = await prisma.contact.findUnique({
-            where: { id: parseInt(contactId) },
-            include: { friend: true },
-        });
-
-        if (!contact) return NextResponse.json({ error: "Contact does not exist" }, { status: 404 });
-        if (contact.userId !== currentUserId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-        // Delete the message from the database
-        const deletedMessage = await prisma.message.delete({
-            where: {
-                id: parseInt(messageId),
-                contactId: parseInt(contactId), // Ensure the message belongs to the correct contact
-            },
-        });
-
-        return NextResponse.json({ success: true, message: "Message deleted successfully" }, { status: 200 });
-    } catch (error) {
-        console.error("Error deleting message:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
-}
-
-export async function DELETE(req, { params }) {
-    try {
         const { contactId, messageId } = params;
         const { emoji } = await req.json();
 
