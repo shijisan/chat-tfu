@@ -8,53 +8,58 @@ datasource db {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  username     String    @unique
-  email        String    @unique
+  id           Int        @id @default(autoincrement())
+  username     String     @unique
+  email        String     @unique
   password     String
   encryptedKey String
-  createdAt    DateTime  @default(now())
-  contacts     Contact[] @relation(name: "UserContacts")
-  friends      Contact[] @relation(name: "FriendContacts")
-  React        React[]
-  Message      Message[]
+  createdAt    DateTime   @default(now())
+  contacts     Contact[]  @relation(name: "UserContacts")
+  friends      Contact[]  @relation(name: "FriendContacts")
+  reactions    Reaction[]
+  messages     Message[]
 }
 
 model Contact {
-  id               Int       @id @default(autoincrement())
+  id               Int        @id @default(autoincrement())
   userId           Int
   friendId         Int
-  user             User      @relation(name: "UserContacts", fields: [userId], references: [id], onDelete: Cascade)
-  friend           User      @relation(name: "FriendContacts", fields: [friendId], references: [id], onDelete: Cascade)
-  messages         Message[] @relation(name: "ContactMessages")
-  isFriend         Boolean   @default(false)
-  blocked          Boolean   @default(false)
+  user             User       @relation(name: "UserContacts", fields: [userId], references: [id], onDelete: Cascade)
+  friend           User       @relation(name: "FriendContacts", fields: [friendId], references: [id], onDelete: Cascade)
+  messages         Message[]  @relation(name: "ContactMessages")
+  isFriend         Boolean    @default(false)
+  blocked          Boolean    @default(false)
   sharedUserKey    String
   sharedContactKey String
-  reacts           React[]   @relation(name: "ContactReacts")
+  reactions        Reaction[] @relation(name: "ContactReacts")
 
   @@unique([userId, friendId])
 }
 
 model Message {
-  id        Int      @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   contactId Int
   senderId  Int
-  contact   Contact  @relation(name: "ContactMessages", fields: [contactId], references: [id], onDelete: Cascade)
-  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  contact   Contact    @relation(name: "ContactMessages", fields: [contactId], references: [id], onDelete: Cascade)
+  sender    User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
   content   String
-  reacts    Json
-  updatedAt DateTime @default(now())
+  reactions Reaction[] @relation(name: "MessageReacts")
+  updatedAt DateTime   @default(now())
+
+  @@index([contactId])
+  @@index([senderId])
 }
 
-model React {
+model Reaction {
   id        Int      @id @default(autoincrement())
-  contactId Int
+  messageId Int
   userId    Int
   emoji     String
-  contact   Contact  @relation(name: "ContactReacts", fields: [contactId], references: [id], onDelete: Cascade)
+  message   Message  @relation(name: "MessageReacts", fields: [messageId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactId Int 
+  contact   Contact  @relation(name: "ContactReacts", fields: [contactId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@unique([contactId, userId, emoji])
+  @@unique([messageId, userId])
 }

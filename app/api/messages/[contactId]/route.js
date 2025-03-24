@@ -80,16 +80,24 @@ export async function GET(req, { params }) {
             where: {
                 OR: [
                     { contactId: parseInt(contactId) },
-                    { contactId: reverseContact.id },  
+                    { contactId: reverseContact.id },
                 ],
             },
             orderBy: { updatedAt: "asc" },
+            include: {
+                reactions: true,
+            },
         });
 
     
         const decryptedMessages = messages.map((msg) => ({
             ...msg,
             content: decryptMessage(msg.content, decryptedSharedKey),
+            reacts: msg.reactions.map((reaction) => ({
+                id: reaction.id,
+                userId: reaction.userId,
+                emoji: reaction.emoji,
+            })),
         }));
 
         return NextResponse.json(decryptedMessages);
@@ -129,9 +137,8 @@ export async function POST(req, { params }) {
         const newMessage = await prisma.message.create({
             data: {
                 contactId: parseInt(contactId),
-                senderId: currentUserId, // ✅ Added senderId to track the sender
+                senderId: currentUserId,
                 content: encryptedContent,
-                reacts: "[]",
             },
         });
 

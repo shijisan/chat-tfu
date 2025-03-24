@@ -111,3 +111,57 @@ export async function DELETE(req, { params }) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
+
+export async function DELETE(req, { params }) {
+    try {
+        const { contactId, messageId } = params;
+        const { emoji } = await req.json();
+
+        // Validate input
+        if (!emoji?.trim()) {
+            return NextResponse.json({ error: "Invalid emoji" }, { status: 400 });
+        }
+
+        // Authenticate user
+        const currentUserId = await getUser();
+        if (!currentUserId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Fetch the message to validate permissions and existence
+        const message = await prisma.message.findFirst({
+            where: {
+                id: parseInt(messageId),
+                contactId: parseInt(contactId),
+            },
+            include: {
+                contact: true,
+            },
+        });
+
+        if (!message) {
+            return NextResponse.json({ error: "Message not found" }, { status: 404 });
+        }
+
+        // Ensure the user has access to the contact
+        if (message.contact.userId !== currentUserId && message.contact.friendId !== currentUserId) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        // Delete the reaction from the database
+        const deletedReaction = await prisma.reaction.delete({
+            where: {
+                messageId_userId_emoji: {
+                    messageId: parseInt(messageId),
+                    userId: parseInt(currentUserId),
+                    emoji,
+                },
+            },
+        });
+
+        return NextResponse.json({ success: true, message: "Reaction removed successfully" }, { status: 200 });
+    } catch (error) {
+        console.error("Error removing reaction:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
+}
