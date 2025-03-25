@@ -75,7 +75,6 @@ export async function GET(req, { params }) {
     
         const decryptedSharedKey = decryptSharedKey(contact.sharedUserKey, userDecryptedKey);
 
-    
         const messages = await prisma.message.findMany({
             where: {
                 OR: [
@@ -85,7 +84,11 @@ export async function GET(req, { params }) {
             },
             orderBy: { updatedAt: "asc" },
             include: {
-                reactions: true,
+                reactions: {
+                    include: {
+                        user: true, // Include the user object for each reaction
+                    },
+                },
             },
         });
 

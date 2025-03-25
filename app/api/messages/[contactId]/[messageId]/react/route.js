@@ -5,7 +5,7 @@ import { getUser } from "@/util/getUser";
 // Add or Replace Reaction (POST)
 export async function POST(req, { params }) {
     try {
-        const { contactId, messageId } = params;
+        const { contactId, messageId } = await params;
         const { emoji } = await req.json();
 
         // Validate input
@@ -83,7 +83,7 @@ export async function POST(req, { params }) {
 // Remove Reaction (DELETE)
 export async function DELETE(req, { params }) {
     try {
-        const { contactId, messageId } = params;
+        const { contactId, messageId } = await params;
 
         // Authenticate user
         const currentUserId = await getUser();

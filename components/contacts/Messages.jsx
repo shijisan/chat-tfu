@@ -1,17 +1,18 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { FaRegSmile } from "react-icons/fa";
-import EmojiPicker from "emoji-picker-react"; // Import the emoji picker
+import EmojiPicker from "emoji-picker-react";
 
 export default function Messages({ contactId, contactName }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [triggerFetch, setTriggerFetch] = useState(false);
     const [userId, setUserId] = useState("");
-    const [showOptions, setShowOptions] = useState(null); // Controls visibility of options menu
-    const [editMessage, setEditMessage] = useState(null); // Controls visibility of edit input
-    const [editInput, setEditInput] = useState(""); // Stores the current edit input value
-    const [activeEmojiPicker, setActiveEmojiPicker] = useState(null); // Tracks which message's emoji picker is active
+    const [showOptions, setShowOptions] = useState(null);
+    const [editMessage, setEditMessage] = useState(null);
+    const [editInput, setEditInput] = useState("");
+    const [activeEmojiPicker, setActiveEmojiPicker] = useState(null);
+    const [expandedReaction, setExpandedReaction] = useState(null); // Track expanded reaction
     const messagesEndRef = useRef(null);
     const formRef = useRef(null);
 
@@ -78,14 +79,14 @@ export default function Messages({ contactId, contactName }) {
     const toggleOptions = (index) => {
         setShowOptions((prev) => (prev === index ? null : index));
         if (showOptions !== index) {
-            setEditMessage(null); // Close edit mode if toggling options for a different message
+            setEditMessage(null);
         }
     };
 
     const handleEdit = (id, content) => {
-        setEditMessage(id); // Enable edit mode for this message
-        setEditInput(content); // Pre-fill the edit input with the current message content
-        setShowOptions(null); // Hide the options menu
+        setEditMessage(id);
+        setEditInput(content);
+        setShowOptions(null);
     };
 
     const saveEdit = async (id) => {
@@ -95,16 +96,16 @@ export default function Messages({ contactId, contactName }) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ content: editInput }),
             });
-            setEditMessage(null); // Exit edit mode
-            setTriggerFetch((prev) => !prev); // Trigger a re-fetch of messages
+            setEditMessage(null);
+            setTriggerFetch((prev) => !prev);
         } catch (error) {
             console.error("Error updating message:", error);
         }
     };
 
     const cancelEdit = () => {
-        setEditMessage(null); // Exit edit mode
-        setEditInput(""); // Clear the edit input
+        setEditMessage(null);
+        setEditInput("");
     };
 
     const deleteMessage = async (id) => {
@@ -112,11 +113,11 @@ export default function Messages({ contactId, contactName }) {
             await fetch(`/api/messages/${contactId}/${id}`, {
                 method: "DELETE",
             });
-            setTriggerFetch((prev) => !prev); // Trigger a re-fetch of messages
+            setTriggerFetch((prev) => !prev);
         } catch (error) {
             console.error("Error deleting message:", error);
         }
-        setShowOptions(null); // Hide the options menu
+        setShowOptions(null);
     };
 
     const addReaction = async (messageId, emoji) => {
@@ -125,7 +126,7 @@ export default function Messages({ contactId, contactName }) {
                 console.error("Invalid emoji:", emoji);
                 return;
             }
-            console.log("Adding reaction with emoji:", emoji); // Log the emoji being sent
+            console.log("Adding reaction with emoji:", emoji);
             const response = await fetch(`/api/messages/${contactId}/${messageId}/react`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -135,10 +136,24 @@ export default function Messages({ contactId, contactName }) {
             if (!result.success) {
                 throw new Error(result.error || "Failed to add reaction");
             }
-            // Trigger a re-fetch of messages to update reactions
             setTriggerFetch((prev) => !prev);
         } catch (error) {
             console.error("Error adding reaction:", error);
+        }
+    };
+
+    const removeReaction = async (messageId) => {
+        try {
+            const response = await fetch(`/api/messages/${contactId}/${messageId}/react`, {
+                method: "DELETE",
+            });
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.error || "Failed to remove reaction");
+            }
+            setTriggerFetch((prev) => !prev);
+        } catch (error) {
+            console.error("Error removing reaction:", error);
         }
     };
 
@@ -146,15 +161,25 @@ export default function Messages({ contactId, contactName }) {
         <>
             <div className="flex-grow min-h-[85vh] overflow-y-auto">
                 <div className="w-full h-[5vh] border-b px-8 font-bold flex items-center">{contactName}</div>
-                {messages.map((msg, index) => {
-                    const isSentByUser = msg.senderId === userId;
-                    return (
-                        <>
-                            <div className="flex flex-col mt-2 p-8">
+                <div className="">
+                    {messages.map((msg, index) => {
+                        const isSentByUser = msg.senderId === userId;
+
+                        // Group reactions by emoji
+                        const groupedReactions = {};
+                        msg.reactions?.forEach((reaction) => {
+                            if (!groupedReactions[reaction.emoji]) {
+                                groupedReactions[reaction.emoji] = [];
+                            }
+                            groupedReactions[reaction.emoji].push(reaction);
+                        });
+
+                        return (
+                            <div className="flex flex-col gap-2 p-8" key={msg.id}>
+                                {/* Message Block */}
                                 <div
-                                    key={msg.id}
                                     className={`max-w-[70%] p-2 rounded-md flex flex-row transition-all relative group ${isSentByUser
-                                        ? "bg-blue-500 text-white self-end text-end me-8"
+                                        ? "bg-blue-500 text-white self-end text-end"
                                         : "bg-gray-200 text-black self-start text-start"
                                         }`}
                                 >
@@ -174,12 +199,12 @@ export default function Messages({ contactId, contactName }) {
                                                 <div className="absolute top-full right-0 z-10">
                                                     <EmojiPicker
                                                         onEmojiClick={(emojiData, event) => {
-                                                            console.log("Selected emoji data:", emojiData); // Debugging log
-                                                            const emoji = emojiData?.emoji; // Extract the emoji string
-                                                            console.log("Extracted emoji:", emoji); // Debugging log
+                                                            console.log("Selected emoji data:", emojiData);
+                                                            const emoji = emojiData?.emoji;
+                                                            console.log("Extracted emoji:", emoji);
                                                             if (emoji) {
-                                                                addReaction(msg.id, emoji); // Add or replace the reaction
-                                                                setActiveEmojiPicker(null); // Hide the emoji picker
+                                                                addReaction(msg.id, emoji);
+                                                                setActiveEmojiPicker(null);
                                                             } else {
                                                                 console.error("Failed to extract emoji from emojiData:", emojiData);
                                                             }
@@ -189,6 +214,7 @@ export default function Messages({ contactId, contactName }) {
                                             )}
                                         </div>
                                     )}
+
                                     {/* Options Button */}
                                     {isSentByUser && (
                                         <button
@@ -199,8 +225,10 @@ export default function Messages({ contactId, contactName }) {
                                             &bull;&bull;&bull;
                                         </button>
                                     )}
+
                                     {/* Message Content */}
                                     {editMessage !== msg.id && <p>{msg.content}</p>}
+
                                     {/* Edit Input */}
                                     {editMessage === msg.id && (
                                         <div>
@@ -213,6 +241,7 @@ export default function Messages({ contactId, contactName }) {
                                             <button className="btn" onClick={cancelEdit}>Cancel</button>
                                         </div>
                                     )}
+
                                     {/* Options Menu */}
                                     {showOptions === index && (
                                         <div className="bg-white border rounded shadow absolute -ms-36 -mt-2 border-neutral-300">
@@ -230,33 +259,67 @@ export default function Messages({ contactId, contactName }) {
                                             </button>
                                         </div>
                                     )}
-
                                 </div>
 
-                                {/* Display Reactions */}
-                                {msg.reacts?.length > 0 && (
-                                    <div className="flex gap-1 mt-1">
-                                        {msg.reacts.map((reaction, idx) => (
-                                            <span key={idx} className="text-sm text-neutral-500 relative">
-                                                {reaction.emoji}
-                                                {/* Show a remove button if the reaction belongs to the current user */}
-                                                {reaction.userId === userId && (
-                                                    <button
-                                                        className="absolute top-0 right-0 text-red-500"
-                                                        onClick={() => removeReaction(msg.id)}
-                                                    >
-                                                        ×
-                                                    </button>
-                                                )}
-                                            </span>
-                                        ))}
+                                {/* Display Reactions Below the Message */}
+                                {Object.keys(groupedReactions).length > 0 && (
+                                    <div className={`flex gap-1 ${isSentByUser ? "self-end" : "self-start"}`}>
+                                        {Object.entries(groupedReactions).map(([emoji, reactions]) => {
+                                            // Sort reactions: current user's reaction first
+                                            const sortedReactions = reactions.sort((a) =>
+                                                a.userId === userId ? -1 : 0
+                                            );
+
+                                            // Check if this reaction is expanded
+                                            const isExpanded = expandedReaction === `${msg.id}-${emoji}`;
+
+                                            return (
+                                                <div
+                                                    key={emoji}
+                                                    className="relative cursor-pointer"
+                                                    onClick={() =>
+                                                        setExpandedReaction(isExpanded ? null : `${msg.id}-${emoji}`)
+                                                    }
+                                                >
+                                                    {/* Emoji and count */}
+                                                    <span className="text-sm text-neutral-500">
+                                                        {emoji} ({reactions.length})
+                                                    </span>
+
+                                                    {/* Expanded Reaction Details */}
+                                                    {isExpanded && (
+                                                        <div className="absolute top-full right-full mt-1 bg-white border rounded shadow w-48 z-10">
+                                                            {sortedReactions.map((reaction, idx) => (
+                                                                <div
+                                                                    key={idx}
+                                                                    className="flex justify-between items-center px-2 py-1 hover:bg-gray-100"
+                                                                >
+                                                                    <span><span className="me-1">{reaction.emoji}</span>{reaction.user?.username || "Unknown User"}</span>
+                                                                    {reaction.userId === userId && (
+                                                                        <button
+                                                                            className="text-red-500"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation(); // Prevent collapsing the reaction
+                                                                                removeReaction(msg.id);
+                                                                            }}
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
-                        </>
-                    );
-                })}
-                <div ref={messagesEndRef} />
+                        );
+                    })}
+                    <div ref={messagesEndRef} />
+                </div>
             </div>
             <form onSubmit={sendMessage} className="flex gap-4 pb-8 px-4" ref={formRef}>
                 <input
