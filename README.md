@@ -2,13 +2,6 @@
 
 Chat-TFU is a privacy-focused messaging app inspired by Facebook Messenger—but without the surveillance. This is a personal project where I'm building a secure and feature-rich communication platform that respects user privacy.  
 
-## **🚀 Features (Planned & In Progress)**  
-✅ **Real-time Messaging** – Send and receive messages instantly  
-✅ **End-to-End Encryption** – Your conversations stay private  
-✅ **Image & Video Sharing** – Share media without compression nightmares  
-✅ **Video & Voice Calls** – Secure, high-quality calls  
-✅ **No Data Tracking** – Your data stays **yours**  
-
 ## **🔧 Tech Stack**  
 - **Frontend:** Next.js 15 (App Router), React 19  
 - **Backend:** Node.js (Serverless with Edge functions)  
@@ -43,9 +36,11 @@ npx prisma migrate dev
 
 ## **📜 Roadmap**  
 ☑️ Basic real-time chat  
-☑️ Encrypted messaging  
-⬜ Image & video uploads  
 ☑️ End-to-end encryption for messages  
+☑️ Reactions to messages
+☑️ Mobile responsiveness web app
+⬜ Block Contacts
+⬜ Image & video uploads  
 ⬜ Video & voice calls  
 ⬜ Group chats  
 ⬜ Mobile App
