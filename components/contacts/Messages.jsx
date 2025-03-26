@@ -67,11 +67,11 @@ export default function Messages({ contactId, contactName }) {
 
     return (
         <>
-            <div className="flex-grow min-h-[88vh] overflow-y-auto">
-                <div className="w-full h-[5vh] border-b border-neutral-300 px-8 font-bold flex items-center">
+            <div className="flex-grow overflow-y-auto flex flex-col">
+                <div className="w-full h-[5vh] border-b border-neutral-300 px-8 font-bold md:flex items-center hidden">
                     {contactName}
                 </div>
-                <div className="p-4">
+                <div className="p-4 flex-grow max-h-[80vh]">
                     {messages.map((msg, index) => (
                         <MessageItem
                             key={msg.id}
@@ -83,7 +83,7 @@ export default function Messages({ contactId, contactName }) {
                     <div ref={messagesEndRef} />
                 </div>
             </div>
-            <form onSubmit={sendMessage} className="flex gap-2 pb-8 px-4">
+            <form onSubmit={sendMessage} className="flex gap-2 px-4 pt-6 border-t border-t-neutral-300">
                 <input
                     className="flex-grow w-full bg-neutral-200 rounded-s-full py-2 px-4"
                     type="text"
