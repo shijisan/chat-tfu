@@ -39,6 +39,7 @@ npx prisma migrate dev
 ☑️ End-to-end encryption for messages  
 ☑️ Reactions to messages
 ☑️ Mobile responsiveness web app
+⬜ Load states
 ⬜ Block Contacts
 ⬜ Image & video uploads  
 ⬜ Video & voice calls  
