@@ -8,16 +8,18 @@ datasource db {
 }
 
 model User {
-  id           Int        @id @default(autoincrement())
-  username     String     @unique
-  email        String     @unique
-  password     String
-  encryptedKey String
-  createdAt    DateTime   @default(now())
-  contacts     Contact[]  @relation(name: "UserContacts")
-  friends      Contact[]  @relation(name: "FriendContacts")
-  reactions    Reaction[]
-  messages     Message[]
+  id                  Int        @id @default(autoincrement())
+  username            String     @unique
+  email               String     @unique
+  password            String
+  encryptedKey        String
+  createdAt           DateTime   @default(now())
+  contacts            Contact[]  @relation(name: "UserContacts")
+  friends             Contact[]  @relation(name: "FriendContacts")
+  reactions           Reaction[]
+  messages            Message[]
+  meetings            Meeting[]  @relation("UserMeetings")
+  meetingParticipants Meeting[]  @relation("MeetingParticipants")
 }
 
 model Contact {
@@ -57,9 +59,22 @@ model Reaction {
   emoji     String
   message   Message  @relation(name: "MessageReacts", fields: [messageId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contactId Int 
+  contactId Int
   contact   Contact  @relation(name: "ContactReacts", fields: [contactId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([messageId, userId])
+}
+
+model Meeting {
+  id           Int       @id @default(autoincrement())
+  meetId       String    @unique
+  hostId       Int
+  host         User      @relation("UserMeetings", fields: [hostId], references: [id], onDelete: Cascade)
+  status       String    @default("active")
+  createdAt    DateTime  @default(now())
+  endedAt      DateTime?
+  participants User[]    @relation("MeetingParticipants")
+
+  @@index([meetId])
 }
