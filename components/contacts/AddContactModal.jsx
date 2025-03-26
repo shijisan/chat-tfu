@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-export default function AddContactModal({ onAddContact }) {
+export default function AddContactModal({ onAddContact, onClose }) {
     const [email, setEmail] = useState("");
     const [id, setId] = useState("");
 
@@ -33,7 +33,7 @@ export default function AddContactModal({ onAddContact }) {
             }
 
             onAddContact();
-
+            onClose();
             setEmail("");
             setId("");
 
@@ -70,10 +70,20 @@ export default function AddContactModal({ onAddContact }) {
                 />
             </div>
 
-            <div>
+            <div className="flex gap-2">
+                {/* Cancel Button */}
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="btn bg-gray-300 text-black py-2 px-4 rounded-md"
+                >
+                    Cancel
+                </button>
+
+                {/* Submit Button */}
                 <button
                     type="submit"
-                    className="btn bg-blue-500 w-full py-2 text-white rounded-md"
+                    className="btn bg-blue-500 text-white py-2 px-4 rounded-md"
                 >
                     Add Contact
                 </button>

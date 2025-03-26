@@ -5,7 +5,7 @@ import { getUser } from "@/util/getUser";
 // Add or Replace Reaction (POST)
 export async function POST(req, { params }) {
     try {
-        const { contactId, messageId } = await params;
+        const { messageId } = await params; // Remove contactId from params
         const { emoji } = await req.json();
 
         // Validate input
@@ -22,8 +22,7 @@ export async function POST(req, { params }) {
         // Fetch the message to validate permissions and existence
         const message = await prisma.message.findUnique({
             where: {
-                id: parseInt(messageId), // Filter by message ID
-                contactId: parseInt(contactId), // Filter by contact ID
+                id: parseInt(messageId), // Filter by message ID only
             },
             include: {
                 contact: true,
@@ -68,7 +67,7 @@ export async function POST(req, { params }) {
                     messageId: parseInt(messageId),
                     userId: parseInt(currentUserId),
                     emoji,
-                    contactId: parseInt(contactId),
+                    contactId: message.contactId, // Use the message's contactId
                 },
             });
         }
@@ -83,7 +82,7 @@ export async function POST(req, { params }) {
 // Remove Reaction (DELETE)
 export async function DELETE(req, { params }) {
     try {
-        const { contactId, messageId } = await params;
+        const { messageId } = await params; // Remove contactId from params
 
         // Authenticate user
         const currentUserId = await getUser();
@@ -94,8 +93,7 @@ export async function DELETE(req, { params }) {
         // Fetch the message to validate permissions and existence
         const message = await prisma.message.findUnique({
             where: {
-                id: parseInt(messageId), // Filter by message ID
-                contactId: parseInt(contactId), // Filter by contact ID
+                id: parseInt(messageId), // Filter by message ID only
             },
             include: {
                 contact: true,

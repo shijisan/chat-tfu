@@ -23,6 +23,10 @@ body {
   font-family: "Poppins";
 }
 
+.emoji{
+  font-family: "Noto Color Emoji";
+}
+
 @layer components {
 
   .card {

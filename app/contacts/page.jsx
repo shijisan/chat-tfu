@@ -16,11 +16,13 @@ export default function Contacts() {
   return (
     <main className="flex min-h-screen">
       <Sidebar activeContactId={contactId} onContactClick={handleContactClick} />
-      <div className="flex-grow w-full border">
+      <div className="flex-grow w-full border border-neutral-300">
         {contactId ? (
           <Messages contactName={contactName} contactId={contactId} />
         ) : (
-          <p className="text-center text-gray-500">Select a contact to start chatting</p>
+          <div className="min-h-[85vh] flex justify-center items-center">
+            <p className="text-center text-gray-500">Select a contact to start chatting</p>
+          </div>
         )}
       </div>
     </main>

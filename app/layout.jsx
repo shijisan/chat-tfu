@@ -1,6 +1,11 @@
-import { Poppins, Roboto_Flex } from "next/font/google";
+import { Poppins, Roboto_Flex, Noto_Color_Emoji } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
+
+const notoColorEmoji = Noto_Color_Emoji({
+  subsets: ["emoji"],
+  weight: "400",
+})
 
 const poppins = Poppins({
   subsets: ["latin"],
