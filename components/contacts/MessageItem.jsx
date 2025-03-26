@@ -8,7 +8,7 @@ export default function MessageItem({ msg, userId, onTriggerFetch }) {
     const [showOptions, setShowOptions] = useState(null);
     const [editMessage, setEditMessage] = useState(null);
     const [editInput, setEditInput] = useState("");
-    const [expandedReaction, setExpandedReaction] = useState(null); // Track expanded reaction
+    const [isReactionPopupOpen, setIsReactionPopupOpen] = useState(false); // Track if the reaction popup is open
 
     const toggleOptions = () => setShowOptions((prev) => !prev);
 
@@ -61,10 +61,6 @@ export default function MessageItem({ msg, userId, onTriggerFetch }) {
         }
     };
 
-    const toggleExpandedReaction = (emoji) => {
-        setExpandedReaction((prev) => (prev === emoji ? null : emoji));
-    };
-
     const isSentByUser = msg.senderId === userId;
 
     // Group reactions by emoji
@@ -80,11 +76,10 @@ export default function MessageItem({ msg, userId, onTriggerFetch }) {
         <div className="flex flex-col gap-2 p-8" key={msg.id}>
             {/* Message Block */}
             <div
-                className={`max-w-[70%] p-2 rounded-md flex transition-all relative group ${
-                    isSentByUser
+                className={`max-w-[70%] p-2 rounded-md flex transition-all relative group ${isSentByUser
                         ? "bg-blue-500 text-white self-end text-end flex-row"
                         : "bg-gray-200 text-black self-start text-start flex-row-reverse"
-                }`}
+                    }`}
             >
                 {/* React Button */}
                 <AddReactionModal msg={msg} userId={userId} onTriggerFetch={onTriggerFetch} />
@@ -139,43 +134,56 @@ export default function MessageItem({ msg, userId, onTriggerFetch }) {
             {/* Display Reactions Below the Message */}
             {Object.keys(groupedReactions).length > 0 && (
                 <div className={`flex gap-1 ${isSentByUser ? "self-end" : "self-start"}`}>
-                    {Object.entries(groupedReactions).map(([emoji, reactions]) => {
-                        const isExpanded = expandedReaction === emoji;
-                        return (
-                            <span key={emoji} className="text-sm text-neutral-500 relative cursor-pointer">
-                                {/* Emoji and Count */}
-                                <span onClick={() => toggleExpandedReaction(emoji)}>
+                    <span
+                        className="text-sm text-neutral-500 relative cursor-pointer"
+                        onClick={() => setIsReactionPopupOpen((prev) => !prev)} // Toggle the reaction popup
+                    >
+                        {/* Emoji and Count */}
+                        <span>
+                            {Object.entries(groupedReactions).map(([emoji, reactions]) => (
+                                <span key={emoji}>
                                     <span className="emoji">{emoji}</span> ({reactions.length})
                                 </span>
+                            ))}
+                        </span>
 
-                                {/* Expanded Reaction Details */}
-                                {isExpanded && (
-                                    <div className={`absolute top-full mt-1 bg-white border rounded shadow w-48 z-10 ${isSentByUser ? "md:right-full right-full left-full" : "md:left-full right-full left-full"}`}>
+                        {/* Expanded Reaction Details */}
+                        {isReactionPopupOpen && (
+                            <div
+                                className={`absolute top-full mt-1 bg-white border rounded shadow w-48 z-10 left-full right-full ${isSentByUser ? "md:-left-48" : "md:-right-48"
+                                    }`}
+                            >
+                                {Object.entries(groupedReactions).map(([emoji, reactions]) => (
+                                    <div className="flex justify-between items-center" key={emoji}>
+                                        <div className="px-2 py-1 font-bold emoji">{emoji}</div>
+
                                         {reactions.map((reaction, idx) => (
-                                            <div
-                                                key={idx}
-                                                className="flex justify-between items-center px-2 py-1 hover:bg-gray-100"
-                                            >
-                                                <span className="emoji">{reaction.emoji}</span>
+                                            <>
                                                 <span>{reaction.user?.username || "Unknown User"}</span>
-                                                {reaction.userId === userId && (
-                                                    <button
-                                                        className="text-red-500"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation(); // Prevent collapsing
-                                                            removeReaction(reaction.id);
-                                                        }}
-                                                    >
-                                                        <FaTrashAlt />
-                                                    </button>
-                                                )}
-                                            </div>
+
+                                                <div
+                                                    key={idx}
+                                                    className="flex justify-between items-center px-2 py-1"
+                                                >
+                                                    {reaction.userId === userId && (
+                                                        <button
+                                                            className="text-red-500 hover:cursor-pointer"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation(); // Prevent collapsing
+                                                                removeReaction(reaction.id);
+                                                            }}
+                                                        >
+                                                            <FaTrashAlt />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </>
                                         ))}
                                     </div>
-                                )}
-                            </span>
-                        );
-                    })}
+                                ))}
+                            </div>
+                        )}
+                    </span>
                 </div>
             )}
         </div>
