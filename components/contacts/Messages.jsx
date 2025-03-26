@@ -68,7 +68,7 @@ export default function Messages({ contactId, contactName }) {
     return (
         <>
             <div className="flex-grow overflow-y-auto flex flex-col">
-                <div className="w-full h-[5vh] border-b border-neutral-300 px-8 font-bold md:flex items-center hidden">
+                <div className="w-full h-[5vh] border-b border-neutral-300 px-8 font-bold md:flex items-center hidden fixed top-0 left-0">
                     {contactName}
                 </div>
                 <div className="p-4 flex-grow max-h-[80vh]">
