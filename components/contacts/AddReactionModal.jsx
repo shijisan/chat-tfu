@@ -33,7 +33,7 @@ export default function AddReactionModal({ msg, userId, onTriggerFetch }) {
                 <FaRegSmile />
             </button>
             {activeEmojiPicker && (
-                <div className={`absolute top-full right-0 z-10 ${isSentByUser ? "right-full" : "left-full"}`}>
+                <div className={`absolute top-full right-0 z-10 ${isSentByUser ? "md:right-full  right-full left-full" : "md:left-full  right-full left-full"}`}>
                     <EmojiPicker
                     lazyLoadEmojis={true}
                     emojiStyle="google"

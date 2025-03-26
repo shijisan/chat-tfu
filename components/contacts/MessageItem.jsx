@@ -150,7 +150,7 @@ export default function MessageItem({ msg, userId, onTriggerFetch }) {
 
                                 {/* Expanded Reaction Details */}
                                 {isExpanded && (
-                                    <div className={`absolute top-full mt-1 bg-white border rounded shadow w-48 z-10 ${isSentByUser ? "right-full" : "left-full"}`}>
+                                    <div className={`absolute top-full mt-1 bg-white border rounded shadow w-48 z-10 ${isSentByUser ? "md:right-full right-full left-full" : "md:left-full right-full left-full"}`}>
                                         {reactions.map((reaction, idx) => (
                                             <div
                                                 key={idx}
