@@ -92,8 +92,12 @@ export default function MessageItem({ msg, userId, onTriggerFetch }) {
                 {/* Options Button */}
                 {isSentByUser && (
                     <button
-                        className={`btn py-0 ps-1 pe-3 ${showOptions ? "block" : "hidden group-hover:block"}`}
+                        className={`btn py-0 ps-1 pe-3 ${showOptions ? "block" : "hidden group-hover:block "}`}
                         onClick={toggleOptions}
+                        onTouchStart={(e) => {
+                            e.stopPropagation(); // Prevent collapsing
+                            toggleOptions();
+                        }}
                     >
                         &bull;&bull;&bull;
                     </button>
