@@ -41,52 +41,57 @@ export default function MeetingPage() {
 
     // Set up WebRTC and signaling
     useEffect(() => {
-        const eventSource = new EventSource(`/api/meet/${meetId}`);
         const localPeerConnections = {};
 
-        // Handle incoming signaling messages
-        eventSource.onmessage = async (event) => {
-            const data = JSON.parse(event.data);
+        // Poll for signaling messages every 5 seconds
+        const pollForSignalingMessages = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/meet/${meetId}`);
+                if (!response.ok) throw new Error("Failed to fetch signaling messages");
 
-            if (data.to === userId.current) {
-                // Only process messages intended for this user
-                if (data.type === "offer") {
-                    // Create a new peer connection for the remote peer
-                    const peerConnection = createPeerConnection(data.from, localPeerConnections);
+                const data = await response.json();
 
-                    // Set the remote description
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                if (data.to === userId.current) {
+                    // Process incoming signaling messages
+                    if (data.type === "offer") {
+                        // Create a new peer connection for the remote peer
+                        const peerConnection = createPeerConnection(data.from, localPeerConnections);
 
-                    // Create an answer and send it back
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
+                        // Set the remote description
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
 
-                    // Send the answer back to the signaling server
-                    fetch(`/api/meet/${meetId}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            type: "answer",
-                            to: data.from,
-                            from: userId.current,
-                            answer: peerConnection.localDescription,
-                        }),
-                    });
-                } else if (data.type === "answer") {
-                    // Set the remote description for the existing peer connection
-                    const peerConnection = localPeerConnections[data.from];
-                    if (peerConnection) {
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    }
-                } else if (data.type === "candidate") {
-                    // Add the ICE candidate to the peer connection
-                    const peerConnection = localPeerConnections[data.from];
-                    if (peerConnection) {
-                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                        // Create an answer and send it back
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+
+                        fetch(`/api/meet/${meetId}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                type: "answer",
+                                to: data.from,
+                                from: userId.current,
+                                answer: peerConnection.localDescription,
+                            }),
+                        });
+                    } else if (data.type === "answer") {
+                        // Set the remote description for the existing peer connection
+                        const peerConnection = localPeerConnections[data.from];
+                        if (peerConnection) {
+                            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                        }
+                    } else if (data.type === "candidate") {
+                        // Add the ICE candidate to the peer connection
+                        const peerConnection = localPeerConnections[data.from];
+                        if (peerConnection) {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                        }
                     }
                 }
+            } catch (error) {
+                console.error("Error polling signaling messages:", error);
             }
-        };
+        }, 5000); // Poll every 5 seconds
 
         // Create a new peer connection
         const createPeerConnection = (peerId, localPeers) => {
@@ -150,9 +155,9 @@ export default function MeetingPage() {
 
         sendOfferToParticipants();
 
-        // Cleanup the EventSource on component unmount
+        // Cleanup polling and peer connections on component unmount
         return () => {
-            eventSource.close();
+            clearInterval(pollForSignalingMessages);
             Object.values(localPeerConnections).forEach((peer) => peer.close());
         };
     }, [meetId]);

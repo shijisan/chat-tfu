@@ -1,52 +1,34 @@
 // /api/meet/[meetId]/route.js
 import { NextResponse } from "next/server";
 
-// In-memory store for tracking clients in each meeting
-const clients = {};
+// In-memory store for tracking signaling messages in each meeting
+const signalingMessages = {};
 
 export async function GET(req, { params }) {
-    const { meetId } = await params;
+    const { meetId } = params;
 
-    // Initialize the stream for this meeting
-    if (!clients[meetId]) {
-        clients[meetId] = [];
+    // Initialize the signaling message queue for this meeting
+    if (!signalingMessages[meetId]) {
+        signalingMessages[meetId] = [];
     }
 
-    const stream = new ReadableStream({
-        start(controller) {
-            const sendEvent = (data) => {
-                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`));
-            };
+    // Return the latest signaling messages
+    const messages = signalingMessages[meetId];
+    signalingMessages[meetId] = []; // Clear the queue after returning messages
 
-            // Add the client to the meeting's list of connected clients
-            const client = { send: sendEvent };
-            clients[meetId].push(client);
-
-            // Cleanup: remove the client when the connection is closed
-            req.signal.addEventListener("abort", () => {
-                clients[meetId] = clients[meetId].filter((c) => c !== client);
-                controller.close();
-            });
-        },
-    });
-
-    return new NextResponse(stream, {
-        headers: {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-        },
-    });
+    return NextResponse.json(messages);
 }
 
 export async function POST(req, { params }) {
-    const { meetId } = await params;
+    const { meetId } = params;
     const data = await req.json();
 
-    // Broadcast the message to all clients in the meeting
-    if (clients[meetId]) {
-        clients[meetId].forEach((client) => client.send(data));
+    // Store the signaling message in the queue
+    if (!signalingMessages[meetId]) {
+        signalingMessages[meetId] = [];
     }
+
+    signalingMessages[meetId].push(data);
 
     return NextResponse.json({ success: true });
 }

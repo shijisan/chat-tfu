@@ -27,6 +27,9 @@ export async function POST(req) {
             },
         });
 
+        // Log the creation of the meeting (optional, for debugging purposes)
+        console.log(`Meeting created: ${newMeet.meetId}`);
+
         // Return the meet ID
         return NextResponse.json({ meetId: newMeet.meetId });
     } catch (error) {
