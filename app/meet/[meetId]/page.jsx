@@ -1,5 +1,3 @@
-// app/meet/[meetId]/page.jsx
-
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
@@ -12,6 +10,7 @@ export default function MeetingPage() {
     const localVideoRef = useRef(null);
     const [remoteStreams, setRemoteStreams] = useState([]);
     const [targetPeerId, setTargetPeerId] = useState(""); // State for target peer ID
+    const [currentPeerId, setCurrentPeerId] = useState(""); // State for current user's Peer ID
     const localStream = useRef(null);
     const peerInstance = useRef(null);
 
@@ -58,6 +57,7 @@ export default function MeetingPage() {
         // When the peer is ready
         peer.on("open", (id) => {
             console.log("My peer ID is:", id);
+            setCurrentPeerId(id); // Store the current user's Peer ID
         });
 
         // Handle incoming calls
@@ -144,6 +144,14 @@ export default function MeetingPage() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen">
             <h1 className="text-2xl font-bold mb-4">Meeting ID: {meetId}</h1>
+
+            {/* Display Current User's Peer ID */}
+            <div className="mb-4">
+                <h2 className="text-lg font-semibold">Your Peer ID</h2>
+                <p className="bg-gray-100 px-4 py-2 rounded-lg w-full max-w-md text-center">
+                    {currentPeerId || "Loading..."}
+                </p>
+            </div>
 
             {/* Local Video Stream */}
             <div className="mb-4">
