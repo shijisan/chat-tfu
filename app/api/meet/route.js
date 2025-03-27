@@ -1,8 +1,8 @@
 // /api/meet/route.js
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // Assuming you are using Prisma ORM
-import { nanoid } from "nanoid"; // Use nanoid for generating unique IDs
-import { getUser } from "@/util/getUser"; // Import the getUser utility
+import { nanoid } from "nanoid";
+import {getUser} from "@/util/getUser"; // Import the getUser utility
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req) {
     try {
@@ -16,22 +16,19 @@ export async function POST(req) {
         // Generate a unique meet ID
         const meetId = nanoid(10);
 
-        // Create the meeting and associate it with the host (user)
-        const newMeet = await prisma.meeting.create({
-            data: {
-                meetId,
-                createdAt: new Date(),
-                host: {
-                    connect: { id: userId }, // Connect the meeting to the authenticated user
-                },
-            },
-        });
+        // Insert the meeting into Supabase
+        const { data, error } = await supabase
+            .from('meetings')
+            .insert([{ meet_id: meetId, host_id: userId }])
+            .select();
 
-        // Log the creation of the meeting (optional, for debugging purposes)
-        console.log(`Meeting created: ${newMeet.meetId}`);
+        if (error) {
+            console.error("Error creating meeting in Supabase:", error);
+            return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        }
 
         // Return the meet ID
-        return NextResponse.json({ meetId: newMeet.meetId });
+        return NextResponse.json({ meetId: data[0].meet_id });
     } catch (error) {
         console.error("Error creating meeting:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
