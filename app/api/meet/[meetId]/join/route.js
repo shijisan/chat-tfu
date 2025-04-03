@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { getUser } from "@/util/getUser"; // Import the getUser utility
+import { getUser } from "@/util/getUser";
 import { supabase } from "@/lib/supabase";
 
-// Join a meeting
 export async function POST(req, { params }) {
     try {
         const { meetId } = await params; // Extract the dynamic `meetId` parameter
@@ -34,22 +33,12 @@ export async function POST(req, { params }) {
 
         const { host_id, participants } = meetingData;
 
-        // Check if the peer ID belongs to the host
-        if (peerId === host_id) {
-            return NextResponse.json({
-                success: true,
-                message: "Host joined the meeting successfully",
-                peerId,
-                isHost: true // Indicate that this is the host
-            });
-        }
-
         // Prevent duplicate entries
         if (participants.includes(peerId)) {
             return NextResponse.json({ error: "You are already a participant in this meeting" }, { status: 400 });
         }
 
-        // Add the peer ID to the participants array in the meetings table
+        // Add the peer ID to the participants array
         const updatedParticipants = [...participants, peerId];
         const { error: updateError } = await supabase
             .from('meetings')
@@ -66,34 +55,10 @@ export async function POST(req, { params }) {
             success: true,
             message: "Joined meeting successfully",
             peerId,
-            isHost: false // Indicate that this is not the host
+            hostId: host_id
         });
     } catch (error) {
         console.error("Error joining meeting:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
-}
-
-export async function GET(req, { params }) {
-    try {
-        const { meetId } = await params; // Extract the dynamic `meetId` parameter
-
-        // Fetch the meeting and its participants
-        const { data: meetingData, error: meetingError } = await supabase
-            .from('meetings')
-            .select('participants')
-            .eq('meet_id', meetId)
-            .single();
-
-        if (meetingError) {
-            console.error("Error fetching meeting participants:", meetingError);
-            return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-        }
-
-        // Return the list of participants
-        return NextResponse.json({ participants: meetingData.participants });
-    } catch (error) {
-        console.error("Error fetching meeting participants:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

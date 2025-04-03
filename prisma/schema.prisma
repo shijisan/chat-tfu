@@ -74,7 +74,6 @@ model Meeting {
   status       String    @default("active")
   createdAt    DateTime  @default(now())
   endedAt      DateTime?
-  participants User[]    @relation("MeetingParticipants")
-
+  participants String[]  @default([])
   @@index([meetId])
 }

@@ -1,31 +1,38 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Peer from "peerjs";
 
 export default function MeetingPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const { meetId } = params;
 
     const localVideoRef = useRef(null);
-    const [remoteStreams, setRemoteStreams] = useState([]);
-    const [targetPeerId, setTargetPeerId] = useState(""); // State for target peer ID
-    const [currentPeerId, setCurrentPeerId] = useState(""); // State for current user's Peer ID
-    const localStream = useRef(null);
-    const peerInstance = useRef(null);
+    const [remoteStreams, setRemoteStreams] = useState([]); // Tracks remote video streams with peerId
+    const [currentPeerId, setCurrentPeerId] = useState(""); // Current user's Peer ID
+    const localStream = useRef(null); // Local media stream
+    const peerInstance = useRef(null); // PeerJS instance
+    const [participants, setParticipants] = useState([]); // List of participants in the meeting
 
-    // Ref to store references to all remote video elements
-    const remoteVideoRefs = useRef({});
+    // Retrieve the Peer ID from the query parameters
+    useEffect(() => {
+        const peerIdFromUrl = searchParams.get("peerId");
+        if (peerIdFromUrl) {
+            setCurrentPeerId(peerIdFromUrl);
+        }
+    }, [searchParams]);
 
     // Access user's camera and display the local stream
     useEffect(() => {
         const getCameraStream = async () => {
             try {
-                localStream.current = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 if (localVideoRef.current) {
-                    localVideoRef.current.srcObject = localStream.current;
+                    localVideoRef.current.srcObject = stream;
                 }
-                console.log("Local stream initialized:", localStream.current);
+                localStream.current = stream;
+                console.log("Local stream initialized:", stream);
             } catch (err) {
                 console.error("Error accessing camera:", err);
             }
@@ -41,102 +48,166 @@ export default function MeetingPage() {
         };
     }, []);
 
-    // Set up PeerJS and handle connections
+    // Initialize PeerJS and handle connections
     useEffect(() => {
         let peer;
 
-        // Initialize PeerJS
-        peer = new Peer({
-            host: "0.peerjs.com", // PeerJS cloud-hosted signaling server
-            port: 443,
-            path: "/",
-        });
+        if (currentPeerId) {
+            peer = new Peer(currentPeerId, {
+                host: "0.peerjs.com", // PeerJS cloud-hosted signaling server
+                port: 443,
+                path: "/",
+            });
 
-        peerInstance.current = peer;
+            peerInstance.current = peer;
 
-        // When the peer is ready
-        peer.on("open", (id) => {
-            console.log("My peer ID is:", id);
-            setCurrentPeerId(id); // Store the current user's Peer ID
-        });
+            // When the peer is ready
+            peer.on("open", async () => {
+                console.log("Reusing Peer ID:", currentPeerId);
 
-        // Handle incoming calls
-        peer.on("call", (call) => {
-            console.log("Received call from:", call.peer);
+                // Join the meeting and add the current user's peer ID
+                try {
+                    const response = await fetch(`/api/meet/${meetId}/join`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ peerId: currentPeerId }),
+                    });
 
-            // Answer the call with the local stream
-            call.answer(localStream.current);
+                    console.log("Joined meeting successfully.");
+                } catch (error) {
+                    console.error("Error joining meeting:", error);
+                    alert("An error occurred while joining the meeting. Please try again.");
+                }
 
-            // Handle the remote stream
-            call.on("stream", (remoteStream) => {
-                console.log("Received remote stream:", remoteStream);
-                setRemoteStreams((prev) => {
-                    if (!prev.find((stream) => stream.id === remoteStream.id)) {
-                        return [...prev, remoteStream];
-                    }
-                    return prev;
+                // Fetch the list of participants
+                fetchParticipants();
+            });
+
+            // Handle incoming calls
+            peer.on("call", (call) => {
+                console.log("Received call from:", call.peer);
+
+                // Ignore calls from the current user (host)
+                if (call.peer === currentPeerId) {
+                    console.log("Ignoring call from self:", call.peer);
+                    return;
+                }
+
+                // Answer the call with the local stream
+                call.answer(localStream.current);
+
+                call.on("stream", (remoteStream) => {
+                    console.log("Received remote stream from:", call.peer);
+                    setRemoteStreams((prev) => {
+                        // Replace the existing stream for this peerId with the new one
+                        const updatedStreams = prev.map((item) =>
+                            item.peerId === call.peer ? { ...item, stream: remoteStream } : item
+                        );
+
+                        // If no stream exists for this peerId, add it
+                        if (!updatedStreams.some((item) => item.peerId === call.peer)) {
+                            updatedStreams.push({ stream: remoteStream, peerId: call.peer });
+                        }
+
+                        return updatedStreams;
+                    });
+                });
+
+                call.on("close", () => {
+                    console.log("Call ended with peer:", call.peer);
+                    setRemoteStreams((prev) =>
+                        prev.filter((item) => item.peerId !== call.peer)
+                    );
                 });
             });
 
-            call.on("close", () => {
-                console.log("Call ended with peer:", call.peer);
-                setRemoteStreams((prev) =>
-                    prev.filter((stream) => stream.id !== call.remoteStream?.id)
-                );
-            });
-        });
-
-        // Cleanup on unmount
-        return () => {
-            if (peer) {
-                peer.destroy();
-                console.log("PeerJS instance destroyed.");
-            }
-        };
-    }, [meetId]);
-
-    // Call another peer when joining a meeting
-    const callPeer = (peerId) => {
-        if (!targetPeerId) {
-            console.error("Please enter a valid peer ID.");
-            alert("Please enter a valid peer ID.");
-            return;
+            // Cleanup on unmount
+            return () => {
+                if (peer) {
+                    peer.destroy();
+                    console.log("PeerJS instance destroyed.");
+                }
+            };
         }
+    }, [meetId, currentPeerId]);
 
+    // Fetch participants from the backend
+    const fetchParticipants = async () => {
+        try {
+            const response = await fetch(`/api/meet/${meetId}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to fetch participants");
+            }
+
+            const { participants: fetchedParticipants } = await response.json();
+
+            // Update the participants state
+            setParticipants(fetchedParticipants);
+
+            // Connect to all other participants
+            fetchedParticipants.forEach((participantPeerId) => {
+                // Avoid connecting to the current user or already connected peers
+                if (
+                    participantPeerId !== currentPeerId &&
+                    !remoteStreams.find((item) => item.peerId === participantPeerId)
+                ) {
+                    connectToPeer(participantPeerId);
+                }
+            });
+        } catch (error) {
+            console.error("Error fetching participants:", error);
+            alert("An error occurred while fetching participants. Please try again.");
+        }
+    };
+
+    // Connect to a remote peer
+    const connectToPeer = (remotePeerId) => {
         if (!peerInstance.current || !localStream.current) {
             console.error("PeerJS instance or local stream not ready.");
-            alert("PeerJS instance or local stream not ready.");
             return;
         }
 
-        console.log("Calling peer:", peerId);
+        console.log("Calling peer:", remotePeerId);
 
-        const call = peerInstance.current.call(peerId, localStream.current);
+        const call = peerInstance.current.call(remotePeerId, localStream.current);
 
         call.on("stream", (remoteStream) => {
-            console.log("Received remote stream:", remoteStream);
+            console.log("Received remote stream from:", call.peer);
             setRemoteStreams((prev) => {
-                if (!prev.find((stream) => stream.id === remoteStream.id)) {
-                    return [...prev, remoteStream];
+                // Replace the existing stream for this peerId with the new one
+                const updatedStreams = prev.map((item) =>
+                    item.peerId === call.peer ? { ...item, stream: remoteStream } : item
+                );
+
+                // If no stream exists for this peerId, add it
+                if (!updatedStreams.some((item) => item.peerId === call.peer)) {
+                    updatedStreams.push({ stream: remoteStream, peerId: call.peer });
                 }
-                return prev;
+
+                return updatedStreams;
             });
         });
 
         call.on("close", () => {
-            console.log("Call ended with peer:", peerId);
+            console.log("Call ended with peer:", remotePeerId);
             setRemoteStreams((prev) =>
-                prev.filter((stream) => stream.id !== call.remoteStream?.id)
+                prev.filter((item) => item.peerId !== call.peer)
             );
+        });
+
+        call.on("error", (err) => {
+            console.error("Error during call with peer:", remotePeerId, err);
+            alert(`An error occurred while connecting to peer ${remotePeerId}. Please try again.`);
         });
     };
 
     // Update remote video elements whenever remoteStreams changes
     useEffect(() => {
-        remoteStreams.forEach((stream) => {
-            const videoRef = remoteVideoRefs.current[stream.id];
-            if (videoRef && stream) {
-                videoRef.srcObject = stream;
+        remoteStreams.forEach(({ stream }) => {
+            const videoElement = document.getElementById(`remote-video-${stream.id}`);
+            if (videoElement && stream) {
+                videoElement.srcObject = stream;
             }
         });
     }, [remoteStreams]);
@@ -169,43 +240,22 @@ export default function MeetingPage() {
             <div className="mb-4">
                 <h2 className="text-lg font-semibold">Participants</h2>
                 {remoteStreams.length > 0 ? (
-                    remoteStreams.map((stream) => {
-                        // Create a ref for each remote video element
-                        remoteVideoRefs.current[stream.id] = remoteVideoRefs.current[stream.id] || {};
-
-                        return (
-                            <div key={stream.id} className="mb-2">
+                    remoteStreams
+                        .filter(({ peerId }) => peerId !== currentPeerId) // Exclude the host's stream
+                        .map(({ stream, peerId }) => (
+                            <div key={peerId} className="mb-2">
+                                <p>{peerId}</p>
                                 <video
-                                    ref={(el) => {
-                                        remoteVideoRefs.current[stream.id] = el;
-                                    }}
+                                    id={`remote-video-${stream.id}`}
                                     autoPlay
                                     playsInline
                                     className="w-full max-w-md rounded-lg bg-black"
                                 />
                             </div>
-                        );
-                    })
+                        ))
                 ) : (
                     <p>No participants yet.</p>
                 )}
-            </div>
-
-            {/* Input Field for Peer ID */}
-            <div className="mb-4 w-full max-w-md">
-                <input
-                    type="text"
-                    placeholder="Enter Peer ID"
-                    value={targetPeerId}
-                    onChange={(e) => setTargetPeerId(e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg mb-2"
-                />
-                <button
-                    onClick={() => callPeer(targetPeerId)} // Use the entered peer ID
-                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors w-full"
-                >
-                    Call Participant
-                </button>
             </div>
         </div>
     );
