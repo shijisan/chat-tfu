@@ -19,7 +19,6 @@ model User {
   reactions           Reaction[]
   messages            Message[]
   meetings            Meeting[]  @relation("UserMeetings")
-  meetingParticipants Meeting[]  @relation("MeetingParticipants")
 }
 
 model Contact {
