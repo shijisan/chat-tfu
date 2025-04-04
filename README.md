@@ -37,11 +37,11 @@ npx prisma migrate dev
 ## **📜 Roadmap**  
 ☑️ Basic real-time chat  
 ☑️ End-to-end encryption for messages  
-☑️ Reactions to messages
-☑️ Mobile responsiveness web app
+☑️ Reactions to messages  
+☑️ Mobile responsiveness web app  
 ☑️ Video & voice calls  
-⬜ Load states
-⬜ Block Contacts
+⬜ Load states  
+⬜ Block Contacts  
 ⬜ Image & video uploads  
 ⬜ Group chats  
-⬜ Mobile App
+⬜ Mobile App  
