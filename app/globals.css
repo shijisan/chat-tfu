@@ -27,6 +27,14 @@ body {
   font-family: "Noto Color Emoji";
 }
 
+.workchatbg{
+  background-image: url("../public/workchat.svg");
+  background-repeat: no-repeat;
+  background-blend-mode: multiply;
+  background-position: top center;
+  background-size: cover
+}
+
 @layer components {
 
   .card {

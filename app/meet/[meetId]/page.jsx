@@ -8,13 +8,13 @@ export default function MeetingPage() {
     const searchParams = useSearchParams();
     const { meetId } = params;
     const localVideoRef = useRef(null);
-    const [remoteStreams, setRemoteStreams] = useState([]); // Tracks remote video streams with peerId
-    const [currentPeerId, setCurrentPeerId] = useState(""); // Current user's Peer ID
-    const localStream = useRef(null); // Local media stream
-    const peerInstance = useRef(null); // PeerJS instance
-    const [participants, setParticipants] = useState([]); // List of participants in the meeting
-    const [isMuted, setIsMuted] = useState(true); // State to track mute status
-    const [isCameraOn, setIsCameraOn] = useState(true); // State to track camera status
+    const [remoteStreams, setRemoteStreams] = useState([]); 
+    const [currentPeerId, setCurrentPeerId] = useState("");
+    const localStream = useRef(null); 
+    const peerInstance = useRef(null);
+    const [participants, setParticipants] = useState([]); 
+    const [isMuted, setIsMuted] = useState(true); 
+    const [isCameraOn, setIsCameraOn] = useState(true);
     const [audioDevices, setAudioDevices] = useState([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState(null);
     const [audioStream, setAudioStream] = useState(null);
@@ -105,7 +105,6 @@ export default function MeetingPage() {
                     alert("An error occurred while joining the meeting. Please try again.");
                 }
 
-                // Fetch the list of participants
                 fetchParticipants();
             });
 
