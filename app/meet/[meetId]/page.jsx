@@ -7,13 +7,13 @@ export default function MeetingPage() {
     const params = useParams();
     const searchParams = useSearchParams();
     const { meetId } = params;
-
     const localVideoRef = useRef(null);
     const [remoteStreams, setRemoteStreams] = useState([]); // Tracks remote video streams with peerId
     const [currentPeerId, setCurrentPeerId] = useState(""); // Current user's Peer ID
     const localStream = useRef(null); // Local media stream
     const peerInstance = useRef(null); // PeerJS instance
     const [participants, setParticipants] = useState([]); // List of participants in the meeting
+    const [isMuted, setIsMuted] = useState(true); // State to track mute status
 
     // Retrieve the Peer ID from the query parameters
     useEffect(() => {
@@ -32,14 +32,15 @@ export default function MeetingPage() {
                     localVideoRef.current.srcObject = stream;
                 }
                 localStream.current = stream;
-                console.log("Local stream initialized:", stream);
+
+                // Mute the audio tracks by default
+                stream.getAudioTracks().forEach((track) => (track.enabled = false));
+                console.log("Local stream initialized and muted:", stream);
             } catch (err) {
                 console.error("Error accessing camera:", err);
             }
         };
-
         getCameraStream();
-
         return () => {
             if (localStream.current) {
                 console.log("Stopping local stream tracks...");
@@ -48,17 +49,27 @@ export default function MeetingPage() {
         };
     }, []);
 
+    // Toggle mute/unmute functionality
+    const toggleMute = () => {
+        if (localStream.current) {
+            const audioTracks = localStream.current.getAudioTracks();
+            audioTracks.forEach((track) => {
+                track.enabled = !track.enabled; // Toggle the enabled state
+            });
+            setIsMuted(!isMuted); // Update the state
+            console.log(`Microphone ${isMuted ? "unmuted" : "muted"}`);
+        }
+    };
+
     // Initialize PeerJS and handle connections
     useEffect(() => {
         let peer;
-
         if (currentPeerId) {
             peer = new Peer(currentPeerId, {
                 host: "0.peerjs.com", // PeerJS cloud-hosted signaling server
                 port: 443,
                 path: "/",
             });
-
             peerInstance.current = peer;
 
             // When the peer is ready
@@ -72,7 +83,6 @@ export default function MeetingPage() {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ peerId: currentPeerId }),
                     });
-
                     console.log("Joined meeting successfully.");
                 } catch (error) {
                     console.error("Error joining meeting:", error);
@@ -95,7 +105,6 @@ export default function MeetingPage() {
 
                 // Answer the call with the local stream
                 call.answer(localStream.current);
-
                 call.on("stream", (remoteStream) => {
                     console.log("Received remote stream from:", call.peer);
                     setRemoteStreams((prev) => {
@@ -103,16 +112,13 @@ export default function MeetingPage() {
                         const updatedStreams = prev.map((item) =>
                             item.peerId === call.peer ? { ...item, stream: remoteStream } : item
                         );
-
                         // If no stream exists for this peerId, add it
                         if (!updatedStreams.some((item) => item.peerId === call.peer)) {
                             updatedStreams.push({ stream: remoteStream, peerId: call.peer });
                         }
-
                         return updatedStreams;
                     });
                 });
-
                 call.on("close", () => {
                     console.log("Call ended with peer:", call.peer);
                     setRemoteStreams((prev) =>
@@ -139,7 +145,6 @@ export default function MeetingPage() {
                 const errorData = await response.json();
                 throw new Error(errorData.error || "Failed to fetch participants");
             }
-
             const { participants: fetchedParticipants } = await response.json();
 
             // Update the participants state
@@ -167,11 +172,8 @@ export default function MeetingPage() {
             console.error("PeerJS instance or local stream not ready.");
             return;
         }
-
         console.log("Calling peer:", remotePeerId);
-
         const call = peerInstance.current.call(remotePeerId, localStream.current);
-
         call.on("stream", (remoteStream) => {
             console.log("Received remote stream from:", call.peer);
             setRemoteStreams((prev) => {
@@ -179,23 +181,19 @@ export default function MeetingPage() {
                 const updatedStreams = prev.map((item) =>
                     item.peerId === call.peer ? { ...item, stream: remoteStream } : item
                 );
-
                 // If no stream exists for this peerId, add it
                 if (!updatedStreams.some((item) => item.peerId === call.peer)) {
                     updatedStreams.push({ stream: remoteStream, peerId: call.peer });
                 }
-
                 return updatedStreams;
             });
         });
-
         call.on("close", () => {
             console.log("Call ended with peer:", remotePeerId);
             setRemoteStreams((prev) =>
                 prev.filter((item) => item.peerId !== call.peer)
             );
         });
-
         call.on("error", (err) => {
             console.error("Error during call with peer:", remotePeerId, err);
             alert(`An error occurred while connecting to peer ${remotePeerId}. Please try again.`);
@@ -234,6 +232,15 @@ export default function MeetingPage() {
                     muted
                     className="w-full max-w-md rounded-lg bg-black"
                 />
+                {/* Mute/Unmute Button */}
+                <button
+                    onClick={toggleMute}
+                    className={`mt-2 px-4 py-2 rounded-lg ${
+                        isMuted ? "bg-red-500" : "bg-green-500"
+                    } text-white font-semibold`}
+                >
+                    {isMuted ? "Unmute Mic" : "Mute Mic"}
+                </button>
             </div>
 
             {/* Remote Video Streams */}
