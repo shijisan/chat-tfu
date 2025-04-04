@@ -31,7 +31,7 @@ export default function Nav() {
                     </label>
 
                     {/* Navigation Links */}
-                    <ul className="lg:flex hidden peer-checked:flex flex-col lg:flex-row font-medium items-center fixed lg:static md:w-1/2 top-[8vh] left-0 w-full bg-background bg-opacity-50 lg:bg-transparent h-[92vh] lg:h-auto justify-evenly text-black lg:text-inherit">
+                    <ul className="lg:flex hidden peer-checked:flex flex-col lg:flex-row font-medium items-center fixed lg:static md:w-1/2 top-[8vh] left-0 w-full bg-background bg-opacity-50 lg:bg-transparent h-[92vh] lg:h-auto justify-evenly text-black lg:text-inherit text-center">
                         <li>
                             <a
                                 className="p-2 hover:brightness-95"
