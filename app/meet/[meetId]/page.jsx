@@ -15,6 +15,9 @@ export default function MeetingPage() {
     const [participants, setParticipants] = useState([]); // List of participants in the meeting
     const [isMuted, setIsMuted] = useState(true); // State to track mute status
     const [isCameraOn, setIsCameraOn] = useState(true); // State to track camera status
+    const [audioDevices, setAudioDevices] = useState([]);
+    const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+    const [audioStream, setAudioStream] = useState(null);
 
     // Retrieve the Peer ID from the query parameters
     useEffect(() => {
@@ -223,8 +226,124 @@ export default function MeetingPage() {
         });
     }, [remoteStreams]);
 
+    useEffect(() => {
+        async function getAudioDevices() {
+            try {
+                // Request microphone permission
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // Get available devices
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputs = devices.filter((device) => device.kind === "audioinput");
+                setAudioDevices(audioInputs);
+            } catch (error) {
+                console.error("Error accessing audio devices:", error);
+            }
+        }
+
+        getAudioDevices();
+    }, []);
+
+    const handleDeviceChange = async (deviceId) => {
+        setSelectedDeviceId(deviceId);
+        try {
+            // Get the new audio stream from the selected device
+            const newAudioStream = await navigator.mediaDevices.getUserMedia({
+                audio: { deviceId: { exact: deviceId } },
+            });
+
+            // Replace the audio track in the existing localStream
+            const newAudioTrack = newAudioStream.getAudioTracks()[0];
+            if (localStream.current) {
+                const oldAudioTracks = localStream.current.getAudioTracks();
+                oldAudioTracks.forEach((track) => {
+                    localStream.current.removeTrack(track); // Remove old audio tracks
+                    track.stop(); // Stop the old track to free resources
+                });
+                localStream.current.addTrack(newAudioTrack); // Add the new audio track
+            }
+
+            // Notify all active calls about the new audio track
+            const connections = peerInstance.current.connections;
+            Object.keys(connections).forEach((remotePeerId) => {
+                connections[remotePeerId].forEach((call) => {
+                    const sender = call.peerConnection.getSenders().find((s) => s.track && s.track.kind === "audio");
+                    if (sender) {
+                        sender.replaceTrack(newAudioTrack); // Replace the audio track in the WebRTC connection
+                    }
+                });
+            });
+
+            console.log("Audio input switched successfully.");
+        } catch (error) {
+            console.error("Error switching audio device:", error);
+        }
+    };
+
+    const disconnect = async () => {
+        // Stop all local media tracks
+        if (localStream.current) {
+            localStream.current.getTracks().forEach((track) => track.stop());
+            console.log("Local media tracks stopped.");
+        }
+
+        // Destroy the PeerJS instance
+        if (peerInstance.current) {
+            peerInstance.current.destroy();
+            console.log("PeerJS instance destroyed.");
+        }
+
+        // Notify the backend that the user has left the meeting
+        try {
+            const response = await fetch(`/api/meet/${meetId}/leave`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ peerId: currentPeerId }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to leave the meeting.");
+            }
+
+            console.log("User left the meeting successfully.");
+        } catch (error) {
+            console.error("Error leaving the meeting:", error);
+            alert("An error occurred while leaving the meeting. Please try again.");
+        }
+
+        // Redirect to the /meet page
+        window.location.href = "/meet";
+    };
+
+    useEffect(() => {
+        const handleBeforeUnload = async () => {
+            try {
+                // Notify the backend that the user is leaving
+                await fetch(`/api/meet/${meetId}/leave`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ peerId: currentPeerId }),
+                    keepalive: true, // Ensures the request completes even if the page is closing
+                });
+                console.log("Notified backend of user leaving.");
+            } catch (error) {
+                console.error("Error notifying backend during unload:", error);
+            }
+        };
+
+        // Add the event listener
+        window.addEventListener("beforeunload", handleBeforeUnload);
+
+        // Cleanup the event listener on unmount
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+        };
+    }, [meetId, currentPeerId]);
+
+
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen">
+        <main className="flex flex-col items-center justify-center min-h-screen pt-[8vh]">
             <h1 className="text-2xl font-bold mb-4">Meeting ID: {meetId}</h1>
 
             {/* Display Current User's Peer ID */}
@@ -236,33 +355,49 @@ export default function MeetingPage() {
             </div>
 
             {/* Local Video Stream */}
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col max-w-lg">
                 <h2 className="text-lg font-semibold">You</h2>
                 <video
                     ref={localVideoRef}
                     autoPlay
                     playsInline
                     muted
-                    className="w-full max-w-md rounded-lg bg-black"
+                    className="w-full flex-grow rounded-lg bg-black"
                 />
-                {/* Mute/Unmute Button */}
-                <button
-                    onClick={toggleMute}
-                    className={`mt-2 px-4 py-2 rounded-lg ${
-                        isMuted ? "bg-red-500" : "bg-green-500"
-                    } text-white font-semibold`}
-                >
-                    {isMuted ? "Unmute Mic" : "Mute Mic"}
-                </button>
-                {/* Camera On/Off Button */}
-                <button
-                    onClick={toggleCamera}
-                    className={`mt-2 ml-2 px-4 py-2 rounded-lg ${
-                        isCameraOn ? "bg-green-500" : "bg-red-500"
-                    } text-white font-semibold`}
-                >
-                    {isCameraOn ? "Turn Off Camera" : "Turn On Camera"}
-                </button>
+                <div className="flex flex-col space-y-4 mt-4">
+                    {/* Camera On/Off Button */}
+                    <button
+                        onClick={toggleCamera}
+                        className={`btn ${isCameraOn ? "bg-green-500" : "bg-neutral-500"
+                            } text-white font-semibold`}
+                    >
+                        {isCameraOn ? "Turn Off Camera" : "Turn On Camera"}
+                    </button>
+                    {/* Mute/Unmute Button */}
+                    <button
+                        onClick={toggleMute}
+                        className={`btn ${isMuted ? "bg-neutral-500" : "bg-green-500"
+                            } text-white font-semibold`}
+                    >
+                        {isMuted ? "Unmute Mic" : "Mute Mic"}
+                    </button>
+
+                    <select
+                        onChange={(e) => handleDeviceChange(e.target.value)}
+                        className="border p-2 mt-2 w-full rounded-sm truncate md:block hidden"
+                    >
+                        <option value="" disabled>Default Microphone</option>
+                        {audioDevices.map((device) => (
+                            <option key={device.deviceId} value={device.deviceId}>
+                                {device.label || `Microphone ${device.deviceId}`}
+                            </option>
+                        ))}
+                    </select>
+
+                    <button className="btn text-red-500 hover:font-medium transition-all" onClick={disconnect} >Disconnect</button>
+                </div>
+
+
             </div>
 
             {/* Remote Video Streams */}
@@ -286,6 +421,6 @@ export default function MeetingPage() {
                     <p>No participants yet.</p>
                 )}
             </div>
-        </div>
+        </main>
     );
 }
