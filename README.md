@@ -22,7 +22,7 @@ pnpm install
 ```
 
 ### **3. Set up environment variables**  
-Create a `.env.local` file and configure your **database connection**, **JWT secrets**, and **Supabase keys**.  
+Create a `.env.local` file and configure your **database connection**, **JWT secrets**, **Nodemailer user and pass**, **Redis URL**, and **Supabase keys**.  
 
 ### **4. Start the development server**  
 ```bash
