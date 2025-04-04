@@ -14,6 +14,7 @@ export default function MeetingPage() {
     const peerInstance = useRef(null); // PeerJS instance
     const [participants, setParticipants] = useState([]); // List of participants in the meeting
     const [isMuted, setIsMuted] = useState(true); // State to track mute status
+    const [isCameraOn, setIsCameraOn] = useState(true); // State to track camera status
 
     // Retrieve the Peer ID from the query parameters
     useEffect(() => {
@@ -58,6 +59,18 @@ export default function MeetingPage() {
             });
             setIsMuted(!isMuted); // Update the state
             console.log(`Microphone ${isMuted ? "unmuted" : "muted"}`);
+        }
+    };
+
+    // Toggle camera on/off functionality
+    const toggleCamera = () => {
+        if (localStream.current) {
+            const videoTracks = localStream.current.getVideoTracks();
+            videoTracks.forEach((track) => {
+                track.enabled = !track.enabled; // Toggle the enabled state
+            });
+            setIsCameraOn(!isCameraOn); // Update the state
+            console.log(`Camera ${isCameraOn ? "turned off" : "turned on"}`);
         }
     };
 
@@ -240,6 +253,15 @@ export default function MeetingPage() {
                     } text-white font-semibold`}
                 >
                     {isMuted ? "Unmute Mic" : "Mute Mic"}
+                </button>
+                {/* Camera On/Off Button */}
+                <button
+                    onClick={toggleCamera}
+                    className={`mt-2 ml-2 px-4 py-2 rounded-lg ${
+                        isCameraOn ? "bg-green-500" : "bg-red-500"
+                    } text-white font-semibold`}
+                >
+                    {isCameraOn ? "Turn Off Camera" : "Turn On Camera"}
                 </button>
             </div>
 
