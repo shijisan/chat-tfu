@@ -10,9 +10,12 @@ function decryptSharedKey(encryptedKey, secret) {
     
     const [ivHex, encrypted] = encryptedKey.split(":");
     const iv = Buffer.from(ivHex, "hex");
-
-    const key = crypto.createHash("sha256").update(secret).digest(); // ✅ more reliable
-
+    
+    // Fix: Use the secret directly as a hex buffer (no SHA-256)
+    const secretBuffer = Buffer.from(secret, "hex");
+    const key = Buffer.alloc(32);
+    secretBuffer.copy(key, 0, 0, Math.min(secretBuffer.length, 32));
+    
     const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
     let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");
@@ -23,8 +26,9 @@ function decryptSharedKey(encryptedKey, secret) {
 function encryptMessage(message, secret) {
     if (typeof message !== "string") throw new Error("Message must be a string");
     const iv = crypto.randomBytes(16);
+    const secretBuffer = Buffer.from(secret, "hex"); // Decode hex string to bytes
     const key = Buffer.alloc(32);
-    Buffer.from(secret).copy(key, 0, 0, Math.min(Buffer.from(secret).length, 32));
+    secretBuffer.copy(key, 0, 0, Math.min(secretBuffer.length, 32));
     const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
     let encrypted = cipher.update(message, "utf8", "hex");
     encrypted += cipher.final("hex");
@@ -55,6 +59,7 @@ export async function PATCH(req, { params }) {
         const userDecryptedKey = await redis.get(redisKey);
         if (!userDecryptedKey) return NextResponse.json({ error: "Session expired. Please log in again." }, { status: 401 });
 
+        // Use the fixed decryptSharedKey
         const decryptedSharedKey = decryptSharedKey(contact.sharedUserKey, userDecryptedKey);
         const encryptedContent = encryptMessage(content, decryptedSharedKey);
 
@@ -77,7 +82,7 @@ export async function PATCH(req, { params }) {
 
 export async function DELETE(req, { params }) {
     try {
-        const { contactId, messageId } = params;
+        const { contactId, messageId } = await params;
         const { emoji } = await req.json();
 
         if (!emoji?.trim()) {
