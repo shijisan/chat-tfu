@@ -7,15 +7,18 @@ import redis from "@/lib/redis";
 // Reuse the decryptSharedKey and encryptMessage functions from the GET/POST routes
 function decryptSharedKey(encryptedKey, secret) {
     if (!encryptedKey || !secret) throw new Error("Missing key or secret");
+    
     const [ivHex, encrypted] = encryptedKey.split(":");
     const iv = Buffer.from(ivHex, "hex");
-    const key = Buffer.alloc(32);
-    Buffer.from(secret).copy(key, 0, 0, Math.min(Buffer.from(secret).length, 32));
+
+    const key = crypto.createHash("sha256").update(secret).digest(); // ✅ more reliable
+
     const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
     let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");
     return decrypted;
 }
+
 
 function encryptMessage(message, secret) {
     if (typeof message !== "string") throw new Error("Message must be a string");
@@ -33,16 +36,13 @@ export async function PATCH(req, { params }) {
         const { contactId, messageId } = await params;
         const { content } = await req.json();
 
-        // Validate input
         if (!content?.trim()) {
             return NextResponse.json({ error: "Invalid message content" }, { status: 400 });
         }
 
-        // Authenticate user
         const currentUserId = await getUser();
         if (!currentUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        // Fetch the contact to validate permissions
         const contact = await prisma.contact.findUnique({
             where: { id: parseInt(contactId) },
             include: { friend: true },
@@ -51,22 +51,17 @@ export async function PATCH(req, { params }) {
         if (!contact) return NextResponse.json({ error: "Contact does not exist" }, { status: 404 });
         if (contact.userId !== currentUserId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-        // Fetch the shared key from Redis
         const redisKey = `decryptedKey:${currentUserId}`;
         const userDecryptedKey = await redis.get(redisKey);
         if (!userDecryptedKey) return NextResponse.json({ error: "Session expired. Please log in again." }, { status: 401 });
 
-        // Decrypt the shared key
         const decryptedSharedKey = decryptSharedKey(contact.sharedUserKey, userDecryptedKey);
-
-        // Encrypt the updated message content
         const encryptedContent = encryptMessage(content, decryptedSharedKey);
 
-        // Update the message in the database
         const updatedMessage = await prisma.message.update({
             where: {
                 id: parseInt(messageId),
-                contactId: parseInt(contactId), // Ensure the message belongs to the correct contact
+                contactId: parseInt(contactId),
             },
             data: {
                 content: encryptedContent,
@@ -85,18 +80,15 @@ export async function DELETE(req, { params }) {
         const { contactId, messageId } = params;
         const { emoji } = await req.json();
 
-        // Validate input
         if (!emoji?.trim()) {
             return NextResponse.json({ error: "Invalid emoji" }, { status: 400 });
         }
 
-        // Authenticate user
         const currentUserId = await getUser();
         if (!currentUserId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Fetch the message to validate permissions and existence
         const message = await prisma.message.findFirst({
             where: {
                 id: parseInt(messageId),
@@ -111,12 +103,10 @@ export async function DELETE(req, { params }) {
             return NextResponse.json({ error: "Message not found" }, { status: 404 });
         }
 
-        // Ensure the user has access to the contact
         if (message.contact.userId !== currentUserId && message.contact.friendId !== currentUserId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        // Delete the reaction from the database
         const deletedReaction = await prisma.reaction.delete({
             where: {
                 messageId_userId_emoji: {

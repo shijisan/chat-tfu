@@ -8,30 +8,31 @@ function decryptSharedKey(encryptedKey, secret) {
     if (!encryptedKey || !secret) throw new Error("Missing key or secret");
     const [ivHex, encrypted] = encryptedKey.split(":");
     const iv = Buffer.from(ivHex, "hex");
+    
+    // Use the secret directly (ensure it's 32 bytes)
     const key = Buffer.alloc(32);
-    Buffer.from(secret).copy(key, 0, 0, Math.min(Buffer.from(secret).length, 32));
+    Buffer.from(secret, "hex").copy(key); // Truncate or pad to 32 bytes
+
     const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
     let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");
     return decrypted;
 }
 
-function encryptMessage(message, secret) {
+function encryptMessage(message, secret) { // Remove `salt`
     if (typeof message !== "string") throw new Error("Message must be a string");
     const iv = crypto.randomBytes(16);
-    const key = Buffer.alloc(32);
-    Buffer.from(secret).copy(key, 0, 0, Math.min(Buffer.from(secret).length, 32));
+    const key = Buffer.from(secret, "hex"); // Convert hex string to buffer directly
     const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
     let encrypted = cipher.update(message, "utf8", "hex");
     encrypted += cipher.final("hex");
     return `${iv.toString("hex")}:${encrypted}`;
 }
 
-function decryptMessage(encryptedMessage, secret) {
+function decryptMessage(encryptedMessage, secret) { // Remove `salt`
     const [ivHex, encrypted] = encryptedMessage.split(":");
     const iv = Buffer.from(ivHex, "hex");
-    const key = Buffer.alloc(32);
-    Buffer.from(secret).copy(key, 0, 0, Math.min(Buffer.from(secret).length, 32));
+    const key = Buffer.from(secret, "hex"); // Convert hex string to buffer directly
     const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
     let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");
@@ -48,7 +49,16 @@ export async function GET(req, { params }) {
         const currentUserId = await getUser();
         if (!currentUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    
+        // Fetch the current user's salt
+        const currentUser = await prisma.user.findUnique({
+            where: { id: currentUserId },
+            select: { salt: true },
+        });
+        if (!currentUser || !currentUser.salt) {
+            return NextResponse.json({ error: "User salt not found" }, { status: 404 });
+        }
+        const salt = currentUser.salt;
+
         const contact = await prisma.contact.findUnique({
             where: { id: parseInt(contactId) },
             include: { friend: true },
@@ -57,7 +67,6 @@ export async function GET(req, { params }) {
         if (!contact) return NextResponse.json({ error: "Contact does not exist" }, { status: 404 });
         if (contact.userId !== currentUserId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    
         const reverseContact = await prisma.contact.findFirst({
             where: {
                 userId: contact.friendId,
@@ -67,13 +76,16 @@ export async function GET(req, { params }) {
 
         if (!reverseContact) return NextResponse.json({ error: "Reverse contact not found" }, { status: 404 });
 
-    
         const redisKey = `decryptedKey:${currentUserId}`;
         const userDecryptedKey = await redis.get(redisKey);
+
+        console.log("user decrypted key:", userDecryptedKey);
+
         if (!userDecryptedKey) return NextResponse.json({ error: "Session expired. Please log in again." }, { status: 401 });
 
-    
+        // Decrypt the shared key using the salt
         const decryptedSharedKey = decryptSharedKey(contact.sharedUserKey, userDecryptedKey);
+
 
         const messages = await prisma.message.findMany({
             where: {
@@ -85,14 +97,11 @@ export async function GET(req, { params }) {
             orderBy: { updatedAt: "asc" },
             include: {
                 reactions: {
-                    include: {
-                        user: true, // Include the user object for each reaction
-                    },
+                    include: { user: true },
                 },
             },
         });
 
-    
         const decryptedMessages = messages.map((msg) => ({
             ...msg,
             content: decryptMessage(msg.content, decryptedSharedKey),
@@ -122,6 +131,16 @@ export async function POST(req, { params }) {
         const currentUserId = await getUser();
         if (!currentUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+        // Fetch the current user's salt
+        const currentUser = await prisma.user.findUnique({
+            where: { id: currentUserId },
+            select: { salt: true },
+        });
+        if (!currentUser || !currentUser.salt) {
+            return NextResponse.json({ error: "User salt not found" }, { status: 404 });
+        }
+        const salt = currentUser.salt;
+
         const contact = await prisma.contact.findUnique({
             where: { id: parseInt(contactId) },
             include: { friend: true },
@@ -134,7 +153,11 @@ export async function POST(req, { params }) {
         const userDecryptedKey = await redis.get(redisKey);
         if (!userDecryptedKey) return NextResponse.json({ error: "Session expired. Please log in again." }, { status: 401 });
 
+        // Decrypt the shared key using the salt
         const decryptedSharedKey = decryptSharedKey(contact.sharedUserKey, userDecryptedKey);
+
+
+        // Encrypt the message content using the salt
         const encryptedContent = encryptMessage(content, decryptedSharedKey);
 
         const newMessage = await prisma.message.create({

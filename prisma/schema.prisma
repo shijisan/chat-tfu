@@ -12,6 +12,7 @@ model User {
   username            String     @unique
   email               String     @unique
   password            String
+  salt                String
   encryptedKey        String
   createdAt           DateTime   @default(now())
   contacts            Contact[]  @relation(name: "UserContacts")

@@ -12,9 +12,10 @@ export async function POST(req) {
         });
 
         if (!userCheck) {
+            const salt = crypto.randomBytes(16).toString("hex");  // Added - Generate a unique salt for the user
             const encryptionKey = crypto.randomBytes(32).toString("hex");
             const iv = crypto.randomBytes(16);
-            const key = crypto.scryptSync(password, "salt", 32);
+            const key = crypto.scryptSync(password, salt, 32);  // Added - Use the salt here
             const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
             let encryptedKey = cipher.update(encryptionKey, "utf8", "hex");
             encryptedKey += cipher.final("hex");
@@ -27,6 +28,7 @@ export async function POST(req) {
                     username,
                     email,
                     password: hashedPassword,
+                    salt,  // Added - Store the salt in the database
                     encryptedKey: encryptedKeyWithIV,
                 },
             });

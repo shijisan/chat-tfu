@@ -10,8 +10,11 @@ function generateSharedKey() {
 
 function encryptSharedKey(data, secret) {
     const iv = crypto.randomBytes(16);
+    // Decode the hex secret to bytes
+    const secretBuffer = Buffer.from(secret, "hex"); // Fix: Add 'hex' encoding
+    // Truncate or pad to 32 bytes
     const key = Buffer.alloc(32);
-    Buffer.from(secret).copy(key, 0, 0, Math.min(Buffer.from(secret).length, 32));
+    secretBuffer.copy(key, 0, 0, Math.min(secretBuffer.length, 32));
     const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
     let encrypted = cipher.update(data, "utf8", "hex");
     encrypted += cipher.final("hex");
