@@ -1,0 +1,15 @@
+name: revive redis
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+
+jobs:
+  revive-redis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ping upstash redis
+        run: |
+          curl -X POST https://chat-tfu.vercel.app/api/revive-redis \
+            -H "Authorization: Bearer ${{ secrets.APP_API_KEY }}"
