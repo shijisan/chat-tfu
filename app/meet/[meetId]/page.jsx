@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Peer from "peerjs";
+import InviteContactsButton from "@/components/meet/InviteContactsButton";
 
 export default function MeetingPage() {
     const params = useParams();
@@ -392,6 +393,11 @@ export default function MeetingPage() {
                             </option>
                         ))}
                     </select>
+
+                        <InviteContactsButton 
+                            meetId={meetId} 
+                            currentPeerId={currentPeerId} 
+                        />
 
                     <button className="btn text-red-500 hover:font-medium transition-all" onClick={disconnect} >Disconnect</button>
                 </div>
