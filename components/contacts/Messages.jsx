@@ -30,19 +30,24 @@ export default function Messages({ contactId, contactName, onMobileToggle }) {
     useEffect(() => {
         if (!contactId) return;
 
-        const fetchMessages = async () => {
-            try {
-                const res = await fetch(`/api/messages/${contactId}`);
-                if (!res.ok) throw new Error("Failed to fetch messages");
-                const data = await res.json();
-                setMessages(data);
-            } catch (error) {
-                console.error("Error fetching messages:", error);
-            }
-        };
+        const interval = setInterval(() => {
+            const fetchMessages = async () => {
+                try {
+                    const res = await fetch(`/api/messages/${contactId}`);
+                    if (!res.ok) throw new Error("Failed to fetch messages");
+                    const data = await res.json();
+                    setMessages(data);
+                } catch (error) {
+                    console.error("Error fetching messages:", error);
+                }
+            };
 
-        fetchMessages();
-    }, [contactId, triggerFetch]);
+            fetchMessages();
+        }, 5000); // every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [contactId]);
+
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
