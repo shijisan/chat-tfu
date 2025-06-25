@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import MessageItem from "./MessageItem.jsx"; // Import the MessageItem component
+import MessageItem from "./MessageItem.jsx";
 
-export default function Messages({ contactId, contactName }) {
+export default function Messages({ contactId, contactName, onMobileToggle }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [triggerFetch, setTriggerFetch] = useState(false);
@@ -65,14 +65,39 @@ export default function Messages({ contactId, contactName }) {
         }
     };
 
-    return (
-        <>
-            <div className="flex-grow overflow-y-auto flex flex-col">
-                <div className="w-full h-[5vh] border-b border-neutral-300 px-8 font-bold md:flex items-center hidden fixed top-0 left-0">
-                    {contactName}
+    if (!contactId) {
+        return (
+            <div className="w-full md:w-3/4 h-full rounded-3xl bg-white border border-neutral-300 flex items-center justify-center">
+                <div className="text-center text-neutral-500">
+                    <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
+                    <p>Choose a contact from the sidebar to start messaging</p>
                 </div>
-                <div className="p-4 flex-grow max-h-[80vh]">
-                    {messages.map((msg, index) => (
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full md:w-3/4 h-full rounded-3xl bg-white border border-neutral-300 flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-300">
+                <button
+                    className="md:hidden p-2 -ml-2 rounded-lg hover:bg-neutral-100"
+                    onClick={() => onMobileToggle(true)}
+                >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <h2 className="font-bold text-lg truncate flex-1 md:text-left text-center">
+                    {contactName}
+                </h2>
+                <div className="w-10 md:hidden" /> {/* Spacer for mobile centering */}
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-2">
+                    {messages.map((msg) => (
                         <MessageItem
                             key={msg.id}
                             msg={msg}
@@ -80,21 +105,27 @@ export default function Messages({ contactId, contactName }) {
                             onTriggerFetch={() => setTriggerFetch((prev) => !prev)}
                         />
                     ))}
-                    <div ref={messagesEndRef} />
                 </div>
+                <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={sendMessage} className="flex gap-2 px-4 pt-6 border-t border-t-neutral-300">
+
+            {/* Input */}
+            <form onSubmit={sendMessage} className="flex gap-2 p-4 border-t border-neutral-300">
                 <input
-                    className="flex-grow w-full bg-neutral-200 rounded-s-full py-2 px-4"
+                    className="flex-1 bg-neutral-200 rounded-full py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     type="text"
-                    placeholder="Start a chat..."
+                    placeholder="Type a message..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                 />
-                <button className="py-2 px-4 btn bg-blue-500 rounded-e-full" type="submit">
+                <button 
+                    className="py-3 px-6 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors font-medium" 
+                    type="submit"
+                    disabled={!input.trim()}
+                >
                     Send
                 </button>
             </form>
-        </>
+        </div>
     );
 }
