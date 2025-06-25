@@ -19,7 +19,7 @@ export default function ChatContainer() {
     };
 
     return (
-        <div className="h-[95vh] p-8 bg-neutral-50">
+        <div className="h-[95vh] md:p-8 bg-neutral-50">
             <div className="h-full flex gap-8 max-w-7xl mx-auto">
                 <Sidebar
                     onContactClick={handleContactClick}

@@ -43,7 +43,7 @@ export default function Sidebar({ onContactClick, activeContactId, isMobileOpen,
         <>
             {/* Mobile Overlay */}
             {isMobileOpen && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
                     onClick={() => onMobileToggle(false)}
                 />
@@ -56,6 +56,12 @@ export default function Sidebar({ onContactClick, activeContactId, isMobileOpen,
                 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
                 <div className="border-b border-neutral-300 flex gap-2 p-4">
+                    <button
+                        className="aspect-square flex items-center justify-center w-10 h-10 bg-neutral-200 text-black rounded-full hover:bg-neutral-300 transition-colors md:hidden"
+                        onClick={() => onMobileToggle(false)}
+                        >
+                        <FaTimes />
+                    </button>
                     <input
                         type="search"
                         className="w-full py-2 px-4 bg-neutral-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -65,7 +71,7 @@ export default function Sidebar({ onContactClick, activeContactId, isMobileOpen,
                     />
                     <button
                         onClick={() => setIsModalOpen(!isModalOpen)}
-                        className="flex items-center justify-center w-10 h-10 bg-neutral-200 text-black rounded-full hover:bg-neutral-300 transition-colors"
+                        className="aspect-square flex items-center justify-center w-10 h-10 bg-neutral-200 text-black rounded-full hover:bg-neutral-300 transition-colors"
                     >
                         {isModalOpen ? <FaTimes /> : <FaPlus />}
                     </button>

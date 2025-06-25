@@ -65,23 +65,12 @@ export default function Messages({ contactId, contactName, onMobileToggle }) {
         }
     };
 
-    if (!contactId) {
-        return (
-            <div className="w-full md:w-3/4 h-full rounded-3xl bg-white border border-neutral-300 flex items-center justify-center">
-                <div className="text-center text-neutral-500">
-                    <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
-                    <p>Choose a contact from the sidebar to start messaging</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="w-full md:w-3/4 h-full rounded-3xl bg-white border border-neutral-300 flex flex-col">
+        <div className="size-full rounded-3xl bg-white border border-neutral-300 flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-300">
                 <button
-                    className="md:hidden p-2 -ml-2 rounded-lg hover:bg-neutral-100"
+                    className="md:hidden p-2 -ml-2 rounded-lg hover:bg-neutral-100 transition-colors"
                     onClick={() => onMobileToggle(true)}
                 >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
