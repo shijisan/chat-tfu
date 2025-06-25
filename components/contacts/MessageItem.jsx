@@ -76,7 +76,7 @@ export default function MessageItem({ msg, userId, onTriggerFetch }) {
         <div className="flex flex-col gap-2 p-8" key={msg.id}>
             {/* Message Block */}
             <div
-                className={`max-w-[70%] p-2 rounded-md flex transition-all relative group h-fit ${isSentByUser
+                className={`md:max-w-[70%] p-2 rounded-md flex transition-all relative group h-fit ${isSentByUser
                         ? "bg-blue-500 text-white self-end text-end flex-row"
                         : "bg-gray-200 text-black self-start text-start flex-row-reverse"
                     }`}
