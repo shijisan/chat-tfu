@@ -3,7 +3,7 @@
 import type { User } from "@/app/messenger/page";
 import { Sidebar } from "./ui/sidebar";
 import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 
 type ExtendedUser = User & {
@@ -43,7 +43,7 @@ export default function ConvoInfoSidebar({
 	const { conversationId } = useParams();
 	const [otherConvoMember, setOtherConvoMember] = useState<ExtendedUser>();
 
-	const fetchOtherConvoMember = async () => {
+	const fetchOtherConvoMember = useCallback(async () => {
 		try {
 			const res = await fetch(`/api/messenger/conversations/${conversationId}/other-convo-member/`);
 			const data = await res.json();
@@ -51,13 +51,13 @@ export default function ConvoInfoSidebar({
 		} catch (err) {
 			console.error("Failed to fetch convo member", err);
 		}
-	}
+	}, [conversationId]);
 
 	useEffect(() => {
 		if (conversationId) {
 			fetchOtherConvoMember();
 		}
-	}, [conversationId]);
+	}, [conversationId, fetchOtherConvoMember]);
 
 
 	return (

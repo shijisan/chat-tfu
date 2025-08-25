@@ -1,12 +1,13 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { decryptMessage, encryptMessage } from "@/lib/messageCryptoUtils";
 import { usePrivateKey } from "@/context/PrivateKeyContext";
 import { usePublicKey } from "@/context/PublicKeyContext";
 import type { ConversationMember } from "@prisma/client";
 import Image from "next/image";
+
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,18 +37,16 @@ export default function Conversation() {
 
 	const [messageContent, setMessageContent] = useState("");
 	const [convoMessages, setConvoMessages] = useState<MessageWithDecrypted[]>([]);
-	const [messageCount, setMessageCount] = useState(0);
+	const [messageCount] = useState(0);
 	const [currentUserId, setCurrentUserId] = useState("");
 	const [recipientPublicKey, setRecipientPublicKey] = useState("");
 
 	const { privateKey } = usePrivateKey();
 	const {
 		publicKey: currentUserPublicKey,
-		isLoading: publicKeyLoading,
-		error: publicKeyError,
 	} = usePublicKey();
 
-	const fetchCurrentUser = async () => {
+	const fetchCurrentUser = useCallback(async () => {
 		try {
 			const res = await fetch("/api/account/user");
 			if (!res.ok) throw new Error(`Failed to fetch user: ${res.status}`);
@@ -57,9 +56,9 @@ export default function Conversation() {
 		} catch (err) {
 			console.error("Error fetching current user:", err);
 		}
-	};
+	}, [setCurrentUserId]);
 
-	const decryptWithContext = async (msg: Message): Promise<MessageWithDecrypted> => {
+	const decryptWithContext = useCallback(async (msg: Message): Promise<MessageWithDecrypted> => {
 		if (!privateKey || !currentUserId) return msg;
 
 		const cipherText =
@@ -73,9 +72,9 @@ export default function Conversation() {
 		} catch {
 			return msg;
 		}
-	};
+	}, [privateKey, currentUserId]);
 
-	const fetchConvoMessages = async () => {
+	const fetchConvoMessages = useCallback(async () => {
 		if (!conversationId || !currentUserId) return;
 
 		try {
@@ -100,13 +99,12 @@ export default function Conversation() {
 				return unique;
 			});
 
-
 		} catch (err) {
 			console.error("Error fetching conversation messages:", err);
 		}
-	};
+	}, [conversationId, currentUserId, messageCount, decryptWithContext]);
 
-	const fetchRecipientPublicKey = async () => {
+	const fetchRecipientPublicKey = useCallback(async () => {
 		if (!conversationId) return;
 
 		try {
@@ -128,7 +126,7 @@ export default function Conversation() {
 		} catch (err) {
 			console.error("Failed to fetch recipient public key", err);
 		}
-	};
+	}, [conversationId, setRecipientPublicKey]);
 
 	const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -174,11 +172,11 @@ export default function Conversation() {
 	useEffect(() => {
 		fetchCurrentUser();
 		fetchRecipientPublicKey();
-	}, [conversationId]);
+	}, [conversationId, fetchCurrentUser, fetchRecipientPublicKey]);
 
 	useEffect(() => {
 		if (currentUserId) fetchConvoMessages();
-	}, [currentUserId, conversationId]);
+	}, [currentUserId, conversationId, fetchConvoMessages]);
 
 	useEffect(() => {
 		const decryptPending = async () => {
@@ -192,7 +190,7 @@ export default function Conversation() {
 		};
 
 		decryptPending();
-	}, [privateKey, currentUserId]);
+	}, [privateKey, currentUserId, convoMessages, decryptWithContext]);
 
 	const groupedMessages = [];
 	for (let i = 0; i < convoMessages.length; i++) {
@@ -215,8 +213,8 @@ export default function Conversation() {
 				<main className="bg-accent w-full flex-1 flex flex-col">
 					<ul className="flex-1 flex flex-col-reverse gap-4 py-6 md:px-8 px-2 overflow-y-auto justify-end w-full">
 						{groupedMessages.map((group, groupIndex) => (
-							<>
-								<li key={groupIndex} className={`flex items-start gap-3 ${group.sender === currentUserId && "flex-row-reverse"}`}>
+							<li key={groupIndex} className="flex flex-col-reverse">
+								<div className={`flex items-start gap-3 ${group.sender === currentUserId && "flex-row-reverse"}`}>
 									<Image src={group.messages[0]?.sender?.image || "https://placehold.co/32/webp"}
 										alt={group.messages[0]?.sender?.name || "Sender"}
 										height={32} width={32}
@@ -229,7 +227,7 @@ export default function Conversation() {
 											</p>
 										))}
 									</div>
-								</li>
+								</div>
 								<p className="text-center text-muted-foreground text-xs">
 									{group.messages.length > 0
 										? new Date(group.messages[group.messages.length - 1].createdAt ?? "").toLocaleString(undefined, {
@@ -241,8 +239,8 @@ export default function Conversation() {
 										})
 										: "No messages"}
 								</p>
-							</>
 
+							</li>
 						))}
 					</ul>
 

@@ -1,15 +1,15 @@
-import { NextResponse } from "next/server";
-
 const enc = new TextEncoder();
-const dec = new TextDecoder();
 
 export function arrayBufferToBase64(buffer: ArrayBuffer) {
    let binary = '';
    const bytes = new Uint8Array(buffer);
    const chunkSize = 0x8000;
+
    for (let i = 0; i < bytes.length; i += chunkSize) {
-      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize) as any);
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
    }
+
    return btoa(binary);
 }
 
@@ -85,8 +85,12 @@ export async function generateKeyPairAndEncrypt(password: string) {
 }
 
 
-export async function derivePrivateKey(password: string, encryptedPrivateKeyB64: string, ivB64: string, saltB64: string) {
-
+export async function derivePrivateKey(
+   password: string,
+   encryptedPrivateKeyB64: string,
+   ivB64: string,
+   saltB64: string
+) {
    const encryptedPrivateKey = base64ToUint8Array(encryptedPrivateKeyB64);
    const iv = base64ToUint8Array(ivB64);
    const salt = base64ToUint8Array(saltB64);
@@ -119,12 +123,11 @@ export async function derivePrivateKey(password: string, encryptedPrivateKeyB64:
          encryptedPrivateKey
       );
       return decrypted;
-
    } catch (err) {
-      console.error("Failed to decrypt private key", err);
-      return null;
+      if (err instanceof DOMException && err.name === "OperationError") {
+         throw new Error("Incorrect password or corrupted data");
+      }
+      throw err;
    }
-
-
-
 }
+

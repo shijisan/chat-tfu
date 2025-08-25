@@ -63,7 +63,7 @@ export default function SetPassword() {
       if (!privateKey) {
          router.push("/messenger");
       }
-   }, [])
+   }, [privateKey, router])
 
    return (
       <>

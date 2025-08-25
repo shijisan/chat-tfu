@@ -7,7 +7,6 @@ export default function PrivateKeyGuard({ children }: { children: React.ReactNod
   const router = useRouter();
   const [passwordExists, setPasswordExists] = useState<boolean | null>(null);
 
-  // fetch passwordExists once
   useEffect(() => {
     const fetchPasswordExists = async () => {
       try {
@@ -23,13 +22,12 @@ export default function PrivateKeyGuard({ children }: { children: React.ReactNod
     fetchPasswordExists();
   }, []);
 
-  // run redirect check only after we have passwordExists
   useEffect(() => {
     if (passwordExists === false){
       router.push("/account/set-password");
     }
     
-  }, []);
+  }, [passwordExists, router]);
 
   return <>{children}</>;
 }

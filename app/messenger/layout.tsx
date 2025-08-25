@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { usePrivateKey } from "@/context/PrivateKeyContext";
 import MessengerSideBar from "@/components/MessengerSidebar";
@@ -46,7 +46,7 @@ type Conversation = {
 };
 
 export default function MessengerLayout({ children }: { children: React.ReactNode }) {
-	const { data: session, status } = useSession();
+	const { status } = useSession();
 	const { privateKey, updatePrivateKey } = usePrivateKey();
 	const pathname = usePathname();
 
@@ -60,71 +60,95 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 	const [recipientEmail, setRecipientEmail] = useState("");
 	const [messageContent, setMessageContent] = useState("");
 	const [isMainMessengerPage, setIsMainMessengerPage] = useState(false);
+	const [unlockError, setUnlockError] = useState<string | null>(null);
 
 	const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!userAuth) return;
-		const derivedPrivateKey = await derivePrivateKey(
-			EPassword,
-			userAuth.encryptedPrivateKey,
-			userAuth.iv,
-			userAuth.salt
-		);
-		if (derivedPrivateKey) {
+		try {
+			const derivedPrivateKey = await derivePrivateKey(
+				EPassword,
+				userAuth.encryptedPrivateKey,
+				userAuth.iv,
+				userAuth.salt
+			);
 			updatePrivateKey(derivedPrivateKey);
 			setUnlockForm(false);
+			setUnlockError(null);
+		} catch (err) {
+			if (err instanceof Error && err.message === "Invalid password") {
+				setUnlockError("Wrong password. Please try again.");
+			} else {
+				setUnlockError("Failed to unlock messages.");
+			}
 		}
 	};
+
 
 	const fetchCurrentUser = async () => {
-		const res = await fetch("/api/account/userAuth");
-		const data = await res.json();
-		setUserAuth(data.userAuth);
+		try {
+			const res = await fetch("/api/account/userAuth");
+			const data = await res.json();
+			setUserAuth(data.userAuth);
 
-		const userRes = await fetch("/api/account/user");
-		const userData = await userRes.json();
-		setCurrentUserId(userData.user?.id || "");
-	};
-
-	const fetchConversations = async () => {
-		const res = await fetch("/api/messenger/conversations");
-		const data = await res.json();
-		const convs: Conversation[] = Array.isArray(data?.conversations)
-			? data.conversations
-			: data?.conversations
-				? [data.conversations]
-				: [];
-		setConversation(convs.length ? convs : null);
-
-		if (convs.length && privateKey && currentUserId) {
-			const map: Record<string, string> = {};
-			await Promise.all(
-				convs.map(async (convo) => {
-					const latest = convo.Message?.[0];
-					if (!latest) return (map[convo.id] = "(No latest message)");
-					const isSender = latest.senderId === currentUserId;
-					const ciphertext = isSender ? latest.senderCipherText : latest.recipientCipherText;
-					if (!ciphertext) return (map[convo.id] = "(No message content)");
-					map[convo.id] = (await decryptMessage(ciphertext, privateKey)) || "(Empty message)";
-				})
-			);
-			setDecryptedMessages(map);
-			setIsDecrypting(false);
+			const userRes = await fetch("/api/account/user");
+			const userData = await userRes.json();
+			setCurrentUserId(userData.user?.id || "");
+		} catch {
+			setUnlockError("Failed to fetch user details.");
 		}
 	};
 
+	const fetchConversations = useCallback(async () => {
+		try {
+			const res = await fetch("/api/messenger/conversations");
+			const data = await res.json();
+			const convs: Conversation[] = Array.isArray(data?.conversations)
+				? data.conversations
+				: data?.conversations
+					? [data.conversations]
+					: [];
+			setConversation(convs.length ? convs : null);
+
+			if (convs.length && privateKey && currentUserId) {
+				const map: Record<string, string> = {};
+				await Promise.all(
+					convs.map(async (convo) => {
+						const latest = convo.Message?.[0];
+						if (!latest) return (map[convo.id] = "(No latest message)");
+						const isSender = latest.senderId === currentUserId;
+						const ciphertext = isSender ? latest.senderCipherText : latest.recipientCipherText;
+						if (!ciphertext) return (map[convo.id] = "(No message content)");
+						try {
+							map[convo.id] = (await decryptMessage(ciphertext, privateKey)) || "(Empty message)";
+						} catch {
+							map[convo.id] = "(Failed to decrypt)";
+						}
+					})
+				);
+				setDecryptedMessages(map);
+				setIsDecrypting(false);
+			}
+		} catch {
+			setUnlockError("Failed to fetch conversations.");
+		}
+	}, [setConversation, setDecryptedMessages, setIsDecrypting, currentUserId, privateKey]);
+
 	useEffect(() => {
-		setIsMainMessengerPage(pathname === '/messenger');
+		setIsMainMessengerPage(pathname === "/messenger");
 	}, [pathname]);
 
 	useEffect(() => {
-		if (status === "authenticated" && !privateKey && !userAuth) fetchCurrentUser().then(() => setUnlockForm(true));
+		if (status === "authenticated" && !privateKey && !userAuth) {
+			fetchCurrentUser().then(() => setUnlockForm(true));
+		}
 	}, [status, privateKey, userAuth]);
 
 	useEffect(() => {
-		if (status === "authenticated" && privateKey && currentUserId) fetchConversations();
-	}, [status, privateKey, currentUserId]);
-
+		if (status === "authenticated" && privateKey && currentUserId) {
+			fetchConversations();
+		}
+	}, [status, privateKey, currentUserId, fetchConversations]);
 
 	if (unlockForm && !privateKey) {
 		return (
@@ -134,9 +158,7 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 						<CardTitle>Unlock Your Messages</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<form onSubmit={handleFormSubmit}
-							className="flex gap-1"
-						>
+						<form onSubmit={handleFormSubmit} className="flex gap-2 flex-col">
 							<Input
 								type="password"
 								value={EPassword}
@@ -144,13 +166,12 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 								placeholder="Enter encryption password"
 								required
 							/>
+							{unlockError && <p className="text-sm text-red-500">{unlockError}</p>}
 							<CardAction>
 								<Button type="submit">Unlock</Button>
-
 							</CardAction>
 						</form>
 					</CardContent>
-
 					<CardFooter>
 						<CardAction>
 							<Button variant="link" asChild>
@@ -158,7 +179,6 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 							</Button>
 						</CardAction>
 					</CardFooter>
-
 				</Card>
 			</div>
 		);
@@ -179,20 +199,19 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 				<main className="flex-1 overflow-auto flex flex-col">
 					<MessengerConvoNav />
 					{isMainMessengerPage ? (
-							<Messenger
-								userAuth={userAuth}
-								conversation={conversation}
-								fetchConversations={fetchConversations}
-								recipientEmail={recipientEmail}
-								setRecipientEmail={setRecipientEmail}
-								messageContent={messageContent}
-								setMessageContent={setMessageContent}
-							/>
+						<Messenger
+							userAuth={userAuth}
+							conversation={conversation}
+							fetchConversations={fetchConversations}
+							recipientEmail={recipientEmail}
+							setRecipientEmail={setRecipientEmail}
+							messageContent={messageContent}
+							setMessageContent={setMessageContent}
+						/>
 					) : (
 						children
 					)}
 				</main>
-
 				<ConvoInfoSidebar
 					fetchCurrentUser={fetchCurrentUser}
 					fetchConversations={fetchConversations}

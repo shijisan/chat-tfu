@@ -1,7 +1,7 @@
 "use client";
 
 import { encryptMessage } from "@/lib/messageCryptoUtils";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -136,7 +136,7 @@ export default function Messenger({
 				<CardContent>
 					<form className="flex flex-col gap-4" onSubmit={handleMessageSend}>
 						<div className="flex flex-col gap-2">
-							<label className="text-sm font-medium">Contact's Email</label>
+							<label className="text-sm font-medium">Contact&apos;s Email</label>
 							<Input
 								type="email"
 								value={recipientEmail}

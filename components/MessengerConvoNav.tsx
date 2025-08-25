@@ -1,6 +1,6 @@
 "use client"
- 
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import type { User } from "@/app/messenger/page";
 import { useParams } from "next/navigation";
 import Image from "next/image";
@@ -20,30 +20,47 @@ export default function MessengerConvoNav() {
 
 	const { toggleSidebar } = useSidebar();
 
-	const fetchOtherConvoMember = async () => {
-		const res = await fetch(`/api/messenger/conversations/${conversationId}/other-convo-member/`);
-		const data = await res.json();
-		console.log("fetched other convo member", data);
-		setOtherConvoMember(data.otherConvoMember.user);
-	}
+	const fetchOtherConvoMember = useCallback(async () => {
+		try {
+			const res = await fetch(`/api/messenger/conversations/${conversationId}/other-convo-member/`);
+
+			if (!res.ok) {
+				throw new Error(`Failed to fetch. Status: ${res.status}`);
+			}
+
+			const data = await res.json();
+			console.log("fetched other convo member", data);
+
+			if (data?.otherConvoMember) {
+				setOtherConvoMember(data.otherConvoMember.user);
+				return { success: true, data: data.otherConvoMember.user };
+			} else {
+				throw new Error("Other conversation member not found. Maybe encryption password missing?");
+			}
+		} catch (err) {
+			console.log("Failed to fetch conversation member, encryption password needed.", err);
+			return;
+		}
+	}, [setOtherConvoMember, conversationId]);
+
 
 	useEffect(() => {
 		fetchOtherConvoMember();
-	}, [conversationId]);
+	}, [conversationId, fetchOtherConvoMember]);
 
 	return (
 		<>
-			<nav className="p-2 bg-card shadow-sm z-30">
+			<nav className="p-2 bg-card shadow-sm z-30 md:hidden">
 				<div className="flex gap-16 items-center">
 					<div className="flex gap-2 items-center">
 						<div>
 							<Button
-							variant="ghost"
-							onClick={toggleSidebar}
-							className="p-1!"
+								variant="ghost"
+								onClick={toggleSidebar}
+								className="p-1!"
 							>
-								<ArrowLeft 
-								className="text-muted-foreground inline"
+								<ArrowLeft
+									className="text-muted-foreground inline"
 								/>
 							</Button>
 						</div>
