@@ -9,8 +9,6 @@ type ConvoProps = {
 export async function GET(__: NextRequest, { params }: ConvoProps) {
    const { conversationId } = await params;
 
-   console.log("Conversation Id:", { conversationId });
-
    const authUser = await auth();
    const userEmail = authUser?.user?.email;
 

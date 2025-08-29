@@ -139,10 +139,10 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 	}, [pathname]);
 
 	useEffect(() => {
-		if (status === "authenticated" && !privateKey && !userAuth) {
+		if (status === "authenticated") {
 			fetchCurrentUser().then(() => setUnlockForm(true));
 		}
-	}, [status, privateKey, userAuth]);
+	}, [status]);
 
 	useEffect(() => {
 		if (status === "authenticated" && privateKey && currentUserId) {

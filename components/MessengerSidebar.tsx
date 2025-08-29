@@ -14,8 +14,13 @@ import {
 	SidebarMenuButton,
 	useSidebar,
 } from "./ui/sidebar";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "./ui/popover";
 import Image from "next/image";
-import { Mail, MessageCirclePlus, Search } from "lucide-react";
+import { Mail, MessageCirclePlus, Search, Ellipsis } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Input } from "./ui/input";
@@ -57,6 +62,7 @@ export default function MessengerSideBar({
 	const { conversationId: currConvoId } = useParams();
 	const [searchTerm, setSearchTerm] = useState("");
 	const { toggleSidebar } = useSidebar();
+	const [openConvoMenu, setOpenConvoMenu] = useState<string | null>(null);
 
 	const filteredConvos = conversation?.filter((convo) => {
 		const member = convo.conversationMember[0]?.user;
@@ -66,12 +72,13 @@ export default function MessengerSideBar({
 
 	return (
 		<Sidebar collapsible="icon" className="overflow-hidden bg-sidebar">
-			<SidebarHeader className="flex flex-row justify-between items-center group-data-[collapsible=icon]:justify-center md:px-2 px-0">
+			<SidebarHeader className="flex flex-row justify-between items-center group-data-[collapsible=icon]:justify-center md:px-2 group-data-[collapsible=icon]:px-0">
 				<span className="inline group-data-[collapsible=icon]:hidden text-base px-2">
 					Chat-TFU
 				</span>
 				<Button
-					className="w-fit group-data-[collapsible=icon]:mx-auto md:size-auto size-3 p-2"
+					className="w-fit group-data-[collapsible=icon]:mx-auto md:size-auto group-data-[collapsible=icon]:size-3 p-2"
+					variant="default"
 					asChild
 				>
 					<Link href="/messenger">
@@ -92,9 +99,6 @@ export default function MessengerSideBar({
 						placeholder="Search for a conversation"
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
-						onFocus={() => {
-							if (window.innerWidth < 768.5) toggleSidebar();
-						}}
 						className="group-data-[collapsible=icon]:hidden"
 					/>
 				</div>
@@ -124,10 +128,10 @@ export default function MessengerSideBar({
 													toggleSidebar();
 												}
 											}}
-											className="h-full"
+											className="h-full group/convo relative"
 										>
 											<SidebarMenuButton
-												className={`flex items-center gap-2 h-full hover:bg-accent-foreground/10 hover:cursor-pointer py-2 ${
+												className={`flex items-center gap-2 h-full hover:bg-accent-foreground/10 hover:cursor-pointer py-2 relative ${
 													currConvoId === convo.id &&
 													"bg-primary group-data-[collapsible=icon]:bg-background text-background hover:bg-primary group-data-[collapsible=icon]:hover:bg-background active:bg-primary active:text-background hover:text-background"
 												}`}
@@ -153,6 +157,37 @@ export default function MessengerSideBar({
 													</div>
 												</div>
 											</SidebarMenuButton>
+
+											<Popover open={openConvoMenu === convo.id} onOpenChange={(open) => setOpenConvoMenu(open ? convo.id : null)}>
+												<PopoverTrigger asChild>
+													<Button
+														variant="ghost"
+														className={`
+															absolute top-1/4 right-2 hidden group-hover/convo:flex rounded-full bg-background! shadow-lg hover:brightness-90 aspect-square size-8 p-0 px-0! z-30 ${openConvoMenu === convo.id ? "!flex brightness-90" : ""} `}
+														onClick={(e) => {
+															e.stopPropagation();
+														}}
+													>
+														<Ellipsis />
+													</Button>
+												</PopoverTrigger>
+												<PopoverContent className="w-auto p-1" align="center" side="right" >
+													<div className="flex flex-col">
+														<Button
+															variant="ghost"
+															className="w-full justify-start"
+														>
+															Edit
+														</Button>
+														<Button
+															variant="ghost"
+															className="w-full justify-start text-destructive hover:text-white hover:bg-destructive"
+														>
+															Delete
+														</Button>
+													</div>
+												</PopoverContent>
+											</Popover>
 										</SidebarMenuItem>
 									);
 								})

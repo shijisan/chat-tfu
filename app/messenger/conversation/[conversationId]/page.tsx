@@ -7,10 +7,16 @@ import { usePrivateKey } from "@/context/PrivateKeyContext";
 import { usePublicKey } from "@/context/PublicKeyContext";
 import type { ConversationMember } from "@prisma/client";
 import Image from "next/image";
-
+import { EllipsisVertical } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+
 
 type Sender = {
 	id: string;
@@ -33,18 +39,18 @@ type MessageWithDecrypted = Message & {
 };
 
 export default function Conversation() {
-	const { conversationId } = useParams<{ conversationId: string }>();
 
+	// declarations
+	const { conversationId } = useParams<{ conversationId: string }>();
 	const [messageContent, setMessageContent] = useState("");
 	const [convoMessages, setConvoMessages] = useState<MessageWithDecrypted[]>([]);
 	const [messageCount] = useState(0);
 	const [currentUserId, setCurrentUserId] = useState("");
 	const [recipientPublicKey, setRecipientPublicKey] = useState("");
-
 	const { privateKey } = usePrivateKey();
-	const {
-		publicKey: currentUserPublicKey,
-	} = usePublicKey();
+	const groupedMessages = [];
+	const { publicKey: currentUserPublicKey } = usePublicKey();
+	const [toggleMessageMenu, setToggleMessageMenu] = useState<string | null>(null);
 
 	const fetchCurrentUser = useCallback(async () => {
 		try {
@@ -168,7 +174,24 @@ export default function Conversation() {
 			console.error("Failed to send message", err);
 		}
 	};
+	
 
+	// calculate time elapsed from message
+	for (let i = 0; i < convoMessages.length; i++) {
+		const msg = convoMessages[i];
+		const prev = convoMessages[i - 1];
+
+		const isSameSender = prev?.senderId === msg.senderId;
+		const withinTime = prev ? (new Date(msg.createdAt || "").getTime() - new Date(prev.createdAt || "").getTime()) < 5 * 60 * 1000 : false;
+
+		if (isSameSender && withinTime) {
+			groupedMessages[groupedMessages.length - 1].messages.push(msg);
+		} else {
+			groupedMessages.push({ sender: msg.senderId, messages: [msg] });
+		}
+	}
+
+	// useeffects
 	useEffect(() => {
 		fetchCurrentUser();
 		fetchRecipientPublicKey();
@@ -192,90 +215,107 @@ export default function Conversation() {
 		decryptPending();
 	}, [privateKey, currentUserId, convoMessages, decryptWithContext]);
 
-	const groupedMessages = [];
-	for (let i = 0; i < convoMessages.length; i++) {
-		const msg = convoMessages[i];
-		const prev = convoMessages[i - 1];
 
-		const isSameSender = prev?.senderId === msg.senderId;
-		const withinTime = prev ? (new Date(msg.createdAt || "").getTime() - new Date(prev.createdAt || "").getTime()) < 5 * 60 * 1000 : false;
-
-		if (isSameSender && withinTime) {
-			groupedMessages[groupedMessages.length - 1].messages.push(msg);
-		} else {
-			groupedMessages.push({ sender: msg.senderId, messages: [msg] });
-		}
-	}
 
 	return (
 		<>
-			<div className="h-screen flex flex-col">
-				<main className="bg-accent w-full flex-1 flex flex-col">
-					<ul className="flex-1 flex flex-col-reverse gap-4 py-6 md:px-8 px-2 overflow-y-auto justify-end w-full">
-						{groupedMessages.map((group, groupIndex) => (
-							<li key={groupIndex} className="flex flex-col-reverse">
-								<div className={`flex items-start gap-3 ${group.sender === currentUserId && "flex-row-reverse"}`}>
-									<Image src={group.messages[0]?.sender?.image || "https://placehold.co/32/webp"}
-										alt={group.messages[0]?.sender?.name || "Sender"}
-										height={32} width={32}
-										className={`rounded-full mt-auto size-8 ${group.sender === currentUserId && "hidden"}`}
-									/>
-									<div className="flex flex-col-reverse gap-2">
-										{group.messages.map((msg) => (
-											<p key={msg.id} className={`p-2 shadow-sm rounded-lg text-sm inline-block w-fit md:max-w-sm max-w-[200px] ${group.sender === currentUserId ? "bg-blue-500 text-white ml-auto" : "bg-background"}`}>
+			<main className="bg-accent w-full flex-1 flex flex-col">
+				<ul className="flex-1 flex flex-col-reverse gap-4 py-6 md:px-8 px-2 overflow-y-auto justify-end w-full">
+					{groupedMessages.map((group, groupIndex) => (
+						<li key={groupIndex} className="flex flex-col-reverse">
+							<div className={`flex items-start gap-3 ${group.sender === currentUserId && "flex-row-reverse"}`}>
+								<Image src={group.messages[0]?.sender?.image || "https://placehold.co/32/webp"}
+									alt={group.messages[0]?.sender?.name || "Sender"}
+									height={32} width={32}
+									className={`rounded-full mt-auto size-8 ${group.sender === currentUserId && "hidden"}`}
+								/>
+								<div className="gap-2 flex flex-col-reverse">
+									{group.messages.map((msg) => (
+										<div key={msg.id}
+											className={`flex items-center gap-1 group relative ${group.sender === currentUserId ? "ml-auto" : "flex-row-reverse mr-auto"}`}
+										>
+											<Popover open={toggleMessageMenu === msg?.id} onOpenChange={(open) => setToggleMessageMenu(open ? msg.id : null)}>
+												<PopoverTrigger asChild>
+													<Button
+														variant="ghost"
+														className={`hidden ${msg.sender.id === currentUserId && "group-hover:flex"} rounded-full hover:bg-muted-foreground/25 aspect-square size-6! p-0! ${toggleMessageMenu === msg?.id && "flex"}`}
+														onClick={() => {}}
+													>
+														<EllipsisVertical />
+													</Button>
+												</PopoverTrigger>
+												<PopoverContent className="w-auto p-1" align="center" side={group.sender === currentUserId ? "left" : "right"}>
+													<div className="flex flex-col">
+														<Button
+															variant="ghost"
+															className="w-full justify-start"
+														>
+															Edit
+														</Button>
+														<Button
+															variant="ghost"
+															className="w-full justify-start text-destructive hover:text-white hover:bg-destructive"
+														>
+															Delete
+														</Button>
+													</div>
+												</PopoverContent>
+											</Popover>
+											<p className={`p-2 shadow-sm rounded-lg text-sm inline-block w-fit md:max-w-sm max-w-[200px] ${group.sender === currentUserId ? "bg-blue-500 text-white" : "bg-background"}`}>
 												{msg.decryptedContent ?? "(undeciphered)"}
 											</p>
-										))}
-									</div>
+										</div>
+
+
+									))}
 								</div>
-								<p className="text-center text-muted-foreground text-xs">
-									{group.messages.length > 0
-										? new Date(group.messages[group.messages.length - 1].createdAt ?? "").toLocaleString(undefined, {
-											year: "numeric",
-											month: "short",
-											day: "numeric",
-											hour: "2-digit",
-											minute: "2-digit",
-										})
-										: "No messages"}
-								</p>
+							</div>
+							<p className="text-center text-muted-foreground text-xs mb-2">
+								{group.messages.length > 0
+									? new Date(group.messages[group.messages.length - 1].createdAt ?? "").toLocaleString(undefined, {
+										year: "numeric",
+										month: "short",
+										day: "numeric",
+										hour: "2-digit",
+										minute: "2-digit",
+									})
+									: "No messages"}
+							</p>
 
-							</li>
-						))}
-					</ul>
+						</li>
+					))}
+				</ul>
 
-					<form
-						onSubmit={handleSendMessage}
-						className="px-4 py-3 flex items-center gap-2"
-					>
-						<div className="w-full">
-							<label hidden>Message Input</label>
-							<Input
-								className="bg-background w-full"
-								type="text"
-								name="MessageInput"
-								placeholder="Send a message..."
-								value={messageContent}
-								onChange={(e) => setMessageContent(e.target.value)}
-								autoComplete="off"
-							/>
-						</div>
+				<form
+					onSubmit={handleSendMessage}
+					className="px-4 py-3 flex items-center gap-2"
+				>
+					<div className="w-full">
+						<label hidden>Message Input</label>
+						<Input
+							className="bg-background w-full"
+							type="text"
+							name="MessageInput"
+							placeholder="Send a message..."
+							value={messageContent}
+							onChange={(e) => setMessageContent(e.target.value)}
+							autoComplete="off"
+						/>
+					</div>
 
-						<div>
-							<Button
-								variant="default"
-								type="submit"
-								disabled={
-									!recipientPublicKey || !currentUserPublicKey || !messageContent.trim()
-								}
-							>
-								Send
-							</Button>
-						</div>
-					</form>
-				</main>
-			</div>
-
+					<div>
+						<Button
+							variant="default"
+							type="submit"
+							disabled={
+								!recipientPublicKey || !currentUserPublicKey || !messageContent.trim()
+							}
+						>
+							Send
+						</Button>
+					</div>
+				</form>
+			</main>
 
 		</>
 	);
