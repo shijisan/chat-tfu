@@ -1,10 +1,12 @@
 "use client";
 
 import type { User } from "@/app/messenger/page";
-import { Sidebar } from "./ui/sidebar";
+import { Sidebar, SidebarContent } from "./ui/sidebar";
 import { useParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { Phone, Video } from "lucide-react";
+import { Button } from "./ui/button";
 
 type ExtendedUser = User & {
 	email: string,
@@ -27,7 +29,6 @@ type Conversation = {
 	}[];
 };
 
-
 type Props = {
 	fetchCurrentUser?: () => Promise<void>;
 	fetchConversations?: () => Promise<void>;
@@ -36,6 +37,7 @@ type Props = {
 	currentUserId?: string;
 	decryptedMessages?: Record<string, string>;
 };
+
 
 export default function ConvoInfoSidebar({
 }: Props) {
@@ -53,6 +55,14 @@ export default function ConvoInfoSidebar({
 		}
 	}, [conversationId]);
 
+	const handleAudioCall = () => {
+		alert("feature still in implementation");
+	}
+
+	const  handleVideoCall = () => {
+		alert("feature still in implementation");
+	}
+
 	useEffect(() => {
 		if (conversationId) {
 			fetchOtherConvoMember();
@@ -66,19 +76,36 @@ export default function ConvoInfoSidebar({
 			className="overflow-hidden border-l md:flex hidden"
 			side="right"
 		>
-			<div className="flex items-center justify-center flex-col pt-8">
-				{otherConvoMember ? (
-					<>
-						<Image className="size-10 rounded-full" src={otherConvoMember.image} alt="qwe" height={40} width={40} />
-						<p>{otherConvoMember.name}</p>
-						<p className="text-sm">{otherConvoMember?.email}</p>
-					</>
-				) : (
-					<>
-						<p>No Convo Member</p>
-					</>
-				)}
-			</div>
+			<SidebarContent className="gap-8">
+				<div className="flex items-center justify-center flex-col pt-8">
+					{otherConvoMember ? (
+						<>
+							<Image className="size-10 rounded-full" src={otherConvoMember.image} alt="qwe" height={40} width={40} />
+							<p>{otherConvoMember.name}</p>
+							<p className="text-sm">{otherConvoMember?.email}</p>
+						</>
+					) : (
+						<>
+							<p>No Convo Member</p>
+						</>
+					)}
+				</div>
+				<div className="flex items-center justify-center gap-6">
+					<Button
+						variant="secondary"
+						onClick={handleAudioCall}
+					>
+						<Phone />
+					</Button>
+					<Button
+						variant="secondary"
+						onClick={handleVideoCall}
+					>
+						<Video />
+					</Button>
+				</div>
+			</SidebarContent>
+
 		</Sidebar>
 	);
 }

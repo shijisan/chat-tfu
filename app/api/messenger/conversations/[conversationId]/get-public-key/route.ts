@@ -45,6 +45,6 @@ export async function GET(__: NextRequest, { params }: ConvoProps) {
 
    return NextResponse.json({ 
       message: "Recipient public key found", 
-      recipientPublicKey: recipient.user.userAuth?.publicKey 
+      otherUserPublicKey: recipient.user.userAuth?.publicKey 
    }, { status: 200 });
 }

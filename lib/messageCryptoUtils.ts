@@ -119,30 +119,22 @@ export async function decryptMessage(
 
 }
 
-export async function signMessage(
-  senderCipherText: string,
+export async function signMessage( 
   recipientCipherText: string,
   senderPrivateKeyB64: string,
 ) {
 
   try {
-    if (!senderCipherText || !recipientCipherText || !senderPrivateKeyB64) {
+    if (!recipientCipherText || !senderPrivateKeyB64) {
       const error = {
         "errMsg": "Missing senderCipherText/recipientCipherText/senderPrivatekeyB64",
-        "errVals": `${senderCipherText}\n${recipientCipherText}\n${senderPrivateKeyB64}`
+        "errVals": `${recipientCipherText}\n${senderPrivateKeyB64}`
       }
       throw new Error(`${error.errMsg} error.errVals`)
     }
 
-    const senderData = enc.encode(senderCipherText);
     const recipientData = enc.encode(recipientCipherText);
     const importedPrivateKey = await privateKeyB64ToCrypto(senderPrivateKeyB64, "sign");
-
-    const senderSignature = await crypto.subtle.sign(
-      { name: "RSA-PSS", saltLength: 32 },
-      importedPrivateKey,
-      senderData
-    );
 
     const recipientSignature = await crypto.subtle.sign(
       { name: "RSA-PSS", saltLength: 32 },
@@ -150,10 +142,9 @@ export async function signMessage(
       recipientData
     );
 
-    const senderSignatureData = arrayBufferToBase64(senderSignature);
     const recipientSignatureData = arrayBufferToBase64(recipientSignature);
 
-    return { senderSignatureData, recipientSignatureData }
+    return recipientSignatureData;
   } catch (err) {
     console.error(err);
   }

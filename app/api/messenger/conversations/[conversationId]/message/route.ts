@@ -6,11 +6,6 @@ type MessageProps = {
    params: Promise<{ conversationId: string }>
 }
 
-export type MessageSignature = {
-   senderSignatureData: string;
-   recipientSignatureData: string;
-}
-
 export async function POST(req: NextRequest, { params }: MessageProps) {
 
    const { conversationId } = await params;
@@ -34,23 +29,20 @@ export async function POST(req: NextRequest, { params }: MessageProps) {
 
    const senderId = user?.id;
 
-   const { recipientCipherText, senderCipherText, messageSignature } = await req.json() as {recipientCipherText: string, senderCipherText: string, messageSignature: MessageSignature};
+   const { recipientCipherText, senderCipherText, recipientSignature } = await req.json();
 
    if (!conversationId) {
       return NextResponse.json({ message: "No conversation selected" }, { status: 401 });
    }
 
-   if (!recipientCipherText || !senderCipherText || !senderId || !messageSignature) {
+   if (!recipientCipherText || !senderCipherText || !senderId || !recipientSignature) {
       return NextResponse.json({ message: "Message fields incomplete" }, { status: 401 });
    }
-
-   const recipientSignature = messageSignature?.recipientSignatureData;
-   const senderSignature = messageSignature?.senderSignatureData;
    
 
    const messageSent = await prisma.message.create({
       data: {
-         recipientCipherText, senderCipherText, conversationId, senderId, recipientSignature, senderSignature
+         recipientCipherText, senderCipherText, conversationId, senderId, recipientSignature
       },
    });
 
