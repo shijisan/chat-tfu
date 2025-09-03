@@ -58,6 +58,8 @@ model Message {
   id                  String       @id @default(cuid())
   senderCipherText    String
   recipientCipherText String
+  senderSignature     String
+  recipientSignature  String
   senderId            String
   sender              User         @relation(fields: [senderId], references: [id])
   conversationId      String

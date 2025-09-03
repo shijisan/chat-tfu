@@ -40,9 +40,7 @@ type Conversation = {
 	id: string;
 	createdAt: string;
 	Message: Message[];
-	conversationMember: {
-		user: User;
-	}[];
+	conversationMember: { user: User }[];
 };
 
 export default function MessengerLayout({ children }: { children: React.ReactNode }) {
@@ -50,41 +48,29 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 	const { privateKey, updatePrivateKey } = usePrivateKey();
 	const pathname = usePathname();
 
-	const [unlockForm, setUnlockForm] = useState(false);
+	const [mounted, setMounted] = useState(false);
 	const [EPassword, setEPassword] = useState("");
-	const [userAuth, setUserAuth] = useState<UserAuth | undefined>();
+	const [unlockError, setUnlockError] = useState<string | null>(null);
+	const [userAuth, setUserAuth] = useState<UserAuth>();
 	const [currentUserId, setCurrentUserId] = useState<string>("");
 	const [conversation, setConversation] = useState<Conversation[] | null>(null);
-	const [isDecrypting, setIsDecrypting] = useState(false);
 	const [decryptedMessages, setDecryptedMessages] = useState<Record<string, string>>({});
+	const [isDecrypting, setIsDecrypting] = useState(false);
+	const [isMainMessengerPage, setIsMainMessengerPage] = useState(false);
 	const [recipientEmail, setRecipientEmail] = useState("");
 	const [messageContent, setMessageContent] = useState("");
-	const [isMainMessengerPage, setIsMainMessengerPage] = useState(false);
-	const [unlockError, setUnlockError] = useState<string | null>(null);
 
-	const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		if (!userAuth) return;
-		try {
-			const derivedPrivateKey = await derivePrivateKey(
-				EPassword,
-				userAuth.encryptedPrivateKey,
-				userAuth.iv,
-				userAuth.salt
-			);
-			updatePrivateKey(derivedPrivateKey);
-			setUnlockForm(false);
-			setUnlockError(null);
-		} catch (err) {
-			if (err instanceof Error && err.message === "Invalid password") {
-				setUnlockError("Wrong password. Please try again.");
-			} else {
-				setUnlockError("Failed to unlock messages.");
-			}
-		}
-	};
+	// mark component mounted
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
+	// determine main page
+	useEffect(() => {
+		setIsMainMessengerPage(pathname === "/messenger");
+	}, [pathname]);
 
+	// fetch user auth & current user
 	const fetchCurrentUser = async () => {
 		try {
 			const res = await fetch("/api/account/userAuth");
@@ -99,18 +85,25 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 		}
 	};
 
+	useEffect(() => {
+		if (status === "authenticated") fetchCurrentUser();
+	}, [status]);
+
+	// fetch conversations
 	const fetchConversations = useCallback(async () => {
+		if (!privateKey || !currentUserId) return;
+
 		try {
 			const res = await fetch("/api/messenger/conversations");
 			const data = await res.json();
 			const convs: Conversation[] = Array.isArray(data?.conversations)
 				? data.conversations
 				: data?.conversations
-					? [data.conversations]
-					: [];
+				? [data.conversations]
+				: [];
 			setConversation(convs.length ? convs : null);
 
-			if (convs.length && privateKey && currentUserId) {
+			if (convs.length) {
 				const map: Record<string, string> = {};
 				await Promise.all(
 					convs.map(async (convo) => {
@@ -132,17 +125,7 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 		} catch {
 			setUnlockError("Failed to fetch conversations.");
 		}
-	}, [setConversation, setDecryptedMessages, setIsDecrypting, currentUserId, privateKey]);
-
-	useEffect(() => {
-		setIsMainMessengerPage(pathname === "/messenger");
-	}, [pathname]);
-
-	useEffect(() => {
-		if (status === "authenticated") {
-			fetchCurrentUser().then(() => setUnlockForm(true));
-		}
-	}, [status]);
+	}, [privateKey, currentUserId]);
 
 	useEffect(() => {
 		if (status === "authenticated" && privateKey && currentUserId) {
@@ -150,7 +133,33 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 		}
 	}, [status, privateKey, currentUserId, fetchConversations]);
 
-	if (unlockForm && !privateKey) {
+	// handle unlock form submit
+	const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		if (!userAuth) return;
+		try {
+			const derivedPrivateKey = await derivePrivateKey(
+				EPassword,
+				userAuth.encryptedPrivateKey,
+				userAuth.iv,
+				userAuth.salt
+			);
+			updatePrivateKey(derivedPrivateKey);
+			setUnlockError(null);
+		} catch (err) {
+			if (err instanceof Error && err.message === "Invalid password") {
+				setUnlockError("Wrong password. Please try again.");
+			} else {
+				setUnlockError("Failed to unlock messages.");
+			}
+		}
+	};
+
+	// hydration-safe: wait for client mount
+	if (!mounted) return null;
+
+	// show unlock form if private key is missing
+	if (!privateKey) {
 		return (
 			<div className="min-h-screen w-full justify-center items-center flex">
 				<Card className="max-w-sm h-full w-full">
@@ -184,6 +193,7 @@ export default function MessengerLayout({ children }: { children: React.ReactNod
 		);
 	}
 
+	// main messenger layout
 	return (
 		<SidebarProvider>
 			<div className="flex w-full h-screen relative">

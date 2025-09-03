@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import type { MessageSignature } from "../conversations/[conversationId]/message/route";
 
 export async function POST(req: NextRequest) {
 
-   const { recipientEmail, senderCipherText, recipientCipherText, conversationId } = await req.json();
+   const { recipientEmail, senderCipherText, recipientCipherText, conversationId, messageSignature } = await req.json() as {recipientEmail: string, recipientCipherText: string, senderCipherText: string, conversationId: string, messageSignature: MessageSignature};
 
    const authUser = await auth();
 
@@ -46,10 +47,13 @@ export async function POST(req: NextRequest) {
 
    const newConversationId = newConversation.id;
 
+   const recipientSignature = messageSignature.recipientSignatureData;
+   const senderSignature = messageSignature.senderSignatureData;
+
 
    const createMessage = await prisma.message.create({
       data: {
-         recipientCipherText, senderCipherText, conversationId: conversationId || newConversationId, senderId
+         recipientCipherText, senderCipherText, conversationId: conversationId || newConversationId, senderId, recipientSignature, senderSignature
       }
    })
 

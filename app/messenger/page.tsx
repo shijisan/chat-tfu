@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { usePrivateKey } from "@/context/PrivateKeyContext";
+import { signMessage } from "@/lib/messageCryptoUtils";
 
 type MessengerProps = {
 	userAuth: UserAuth | undefined;
@@ -60,6 +62,9 @@ export default function Messenger({
 	messageContent,
 	setMessageContent,
 }: MessengerProps) {
+
+	const {privateKey} = usePrivateKey();
+
 	const handleMessageSend = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
@@ -93,8 +98,15 @@ export default function Messenger({
 					conversationId = conversation[0].id;
 				}
 
+				if (!fetchRecipientCipherText || ! fetchSenderCipherText || !privateKey) {
+					console.error("Missing ciphertexts/privateKey");
+					return;
+				}
+
 				const senderCipherText = fetchSenderCipherText.ciphertext;
 				const recipientCipherText = fetchRecipientCipherText.ciphertext;
+
+				const messageSignature = await signMessage(senderCipherText, recipientCipherText, privateKey)
 
 				const messageRes = await fetch("/api/messenger/message", {
 					method: "POST",
@@ -106,6 +118,7 @@ export default function Messenger({
 						senderCipherText,
 						recipientCipherText,
 						conversationId,
+						messageSignature
 					}),
 				});
 

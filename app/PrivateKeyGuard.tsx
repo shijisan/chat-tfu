@@ -1,33 +1,62 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function PrivateKeyGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [passwordExists, setPasswordExists] = useState<boolean | null>(null);
+  const pathname = usePathname();
 
-  useEffect(() => {
-    const fetchPasswordExists = async () => {
-      try {
-        const res = await fetch("/api/account/set-password");
-        const data = await res.json();
-        console.log("password exists?", data);
-        setPasswordExists(data.passwordExists ?? false);
-      } catch (err) {
-        console.error("Failed to fetch user password status", err);
-        setPasswordExists(false);
+  const fetchPasswordExists = useCallback(async () => {
+    try {
+      // Check if account has a password
+      const res = await fetch("/api/account/set-password");
+      const data = await res.json();
+      setPasswordExists(data.passwordExists);
+
+      if (data.passwordExists === false ) {
+        router.replace("/account/set-password");
+        return;
       }
-    };
-    fetchPasswordExists();
-  }, []);
+
+      // Check if session user exists in DB
+      const userRes = await fetch("/api/account/user");
+      if (!userRes.ok) {
+        console.error("User not found or session invalid, redirecting to /auth");
+        router.replace("/auth");
+        return;
+      }
+
+      const userData = await userRes.json();
+      if (!userData.user) {
+        console.error("User data missing, redirecting to /auth");
+        router.replace("/auth");
+        return;
+      }
+
+      console.log("User verified:", userData.user.id);
+    } catch (err) {
+      console.error("Error verifying password or user:", err);
+      router.replace("/auth");
+    }
+  }, [router]);
 
   useEffect(() => {
-    if (passwordExists === false){
-      router.push("/account/set-password");
+    if (
+      pathname !== "/" &&
+      pathname !== "/account/set-password" &&
+      pathname !== "/auth"
+    ) {
+      fetchPasswordExists();
     }
-    
-  }, [passwordExists, router]);
+  }, [fetchPasswordExists, pathname]);
+
+  // Your existing messenger shortcut logic
+  if (pathname === "/messenger" && passwordExists) {
+    return;
+  }
 
   return <>{children}</>;
 }

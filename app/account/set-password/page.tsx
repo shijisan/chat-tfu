@@ -60,7 +60,7 @@ export default function SetPassword() {
    }
 
    useEffect(() => {
-      if (!privateKey) {
+      if (privateKey) {
          router.push("/messenger");
       }
    }, [privateKey, router])

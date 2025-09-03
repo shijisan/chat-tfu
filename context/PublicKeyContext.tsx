@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type PublicKeyContextType = {
   publicKey: string | null;
@@ -18,6 +18,7 @@ export const PublicKeyProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchKey() {
@@ -31,6 +32,7 @@ export const PublicKeyProvider = ({ children }: { children: ReactNode }) => {
         const res = await fetch("/api/account/user/publicKey");
 
         if (!res.ok) {
+          router.push("/account/set-password");
           throw new Error(`Failed to fetch public key: ${res.status} ${res.statusText}`);
         }
 
